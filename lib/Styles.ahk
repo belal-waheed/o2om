@@ -27,6 +27,6 @@ class O2omStyles {
     static FONT_TITLE       := "Segoe UI Variable Display"
 
     ; Dimensions
-    static WIN_WIDTH        := 360
-    static WIN_HEIGHT       := 350
+    static WIN_WIDTH        := 385
+    static WIN_HEIGHT       := 390
 }

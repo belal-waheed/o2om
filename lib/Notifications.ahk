@@ -24,9 +24,10 @@ class O2omNotify {
         }
     }
 
-    static Show(title, message, soundType := 64) {
+    static Show(title, message, soundType := 64, playSound := true) {
         ; Sound feedback
-        try SoundPlay("*" soundType)
+        if (playSound)
+            try SoundPlay("*" soundType)
 
         ; Clear any active tray tip before displaying new one to ensure clean pop-up
         try TrayTip()

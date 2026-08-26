@@ -9,6 +9,7 @@ class O2omEngine {
 
     ; State
     remaining       := 0
+    sessionTotalMs  := 0
     lastTick        := 0
     reminderStage   := 0    ; 0 = Countdown, 1 = First Warning, 2 = Final Warning / Auto-Reset
     isIdle          := false
@@ -32,8 +33,14 @@ class O2omEngine {
     idleThresholdMs => this.settings.idleThresholdMin * 60 * 1000
     escalationMs    => this.settings.escalationMin * 60 * 1000
 
+    ; Progress & Cycle Properties
+    currentCycle    => Mod(this.completedCycles, Max(1, this.settings.cyclesBeforeLong)) + 1
+    totalCycles     => Max(1, this.settings.cyclesBeforeLong)
+    progressPercent => (this.sessionTotalMs > 0) ? Max(0, Min(100, Integer(((this.sessionTotalMs - this.remaining) / this.sessionTotalMs) * 100))) : 0
+
     ResetToWork() {
         this.remaining       := this.workMs
+        this.sessionTotalMs  := this.workMs
         this.reminderStage   := 0
         this.isIdle          := false
         this.isOnBreak       := false
@@ -52,14 +59,16 @@ class O2omEngine {
     }
 
     StartWork() {
-        this.isWaitingWork := false
-        this.isOnBreak     := false
-        this.isWaitingBreak:= false
-        this.isPaused      := false
-        this.isIdle        := false
-        this.reminderStage := 0
-        this.breakWaitStart:= 0
-        this.lastTick      := A_TickCount
+        this.isWaitingWork  := false
+        this.isOnBreak      := false
+        this.isWaitingBreak := false
+        this.isPaused       := false
+        this.isIdle         := false
+        this.reminderStage  := 0
+        this.breakWaitStart := 0
+        this.remaining      := this.workMs
+        this.sessionTotalMs := this.workMs
+        this.lastTick       := A_TickCount
     }
 
     StartBreak() {
@@ -73,16 +82,18 @@ class O2omEngine {
         this.completedCycles += 1
 
         ; Determine if long break or short break
-        if (Mod(this.completedCycles, this.settings.cyclesBeforeLong) == 0) {
+        if (Mod(this.completedCycles, Max(1, this.settings.cyclesBeforeLong)) == 0) {
             this.remaining := this.longBreakMs
         } else {
             this.remaining := this.shortBreakMs
         }
+        this.sessionTotalMs := this.remaining
         this.lastTick := A_TickCount
     }
 
     Snooze() {
         this.remaining      := this.snoozeMs
+        this.sessionTotalMs := this.snoozeMs
         this.reminderStage  := 0
         this.isIdle         := false
         this.isOnBreak      := false
@@ -104,12 +115,27 @@ class O2omEngine {
 
         idle := A_TimeIdlePhysical
 
-        ; 1. Sleep/Wake gap check
+        ; 1. Sleep/Wake gap check (e.g. laptop closed or system suspended)
         if (delta > O2omEngine.SLEEP_GAP) {
-            if (idle >= this.idleThresholdMs && !this.isOnBreak) {
-                this.ResetToWork()
+            if (!this.isOnBreak) {
+                ; If suspended for >= idle threshold or user was away, reset to fresh work session
+                if (delta >= this.idleThresholdMs || idle >= this.idleThresholdMs) {
+                    this.ResetToWork()
+                    return { type: "normal" }
+                }
+            } else {
+                ; If break elapsed while sleeping, transition to waiting work
+                if (delta >= this.remaining) {
+                    this.isOnBreak     := false
+                    this.isWaitingWork := true
+                    this.remaining     := this.workMs
+                    this.sessionTotalMs:= this.workMs
+                    return { type: "break_ended" }
+                } else {
+                    this.remaining -= delta
+                    return { type: "normal" }
+                }
             }
-            return { type: "normal" }
         }
 
         ; 2. Idle State Handling (Enforced strictly during active work sessions)
@@ -137,6 +163,15 @@ class O2omEngine {
 
         ; 4. Escalation Warning & Auto-Reset Check
         if (this.isWaitingBreak) {
+            ; Check if user returned during unacknowledged break
+            if (this.isIdle && idle < this.idleThresholdMs) {
+                if (this.reminderStage >= 2) {
+                    this.ResetToWork()
+                    return { type: "auto_work_reset", stage: 2 }
+                }
+                this.isIdle := false
+            }
+
             if (this.breakWaitStart > 0 && (now - this.breakWaitStart) >= this.escalationMs) {
                 this.reminderStage++
                 this.breakWaitStart := now
@@ -165,6 +200,7 @@ class O2omEngine {
                 this.isOnBreak     := false
                 this.isWaitingWork := true
                 this.remaining     := this.workMs
+                this.sessionTotalMs:= this.workMs
                 return { type: "break_ended" }
             } else if (!this.isWaitingBreak) {
                 this.isWaitingBreak := true

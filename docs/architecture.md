@@ -122,8 +122,8 @@ class O2omStyles {
     static FONT_PRIMARY     := "Segoe UI"
     static FONT_TITLE       := "Segoe UI Variable Display"
 
-    static WIN_WIDTH        := 360
-    static WIN_HEIGHT       := 350
+    static WIN_WIDTH        := 385
+    static WIN_HEIGHT       := 390
 }
 ```
 
@@ -131,22 +131,24 @@ class O2omStyles {
 
 ## 4. Critical Engineering Invariants
 
-1. **Zero Text Redraw Flicker (`WS_CLIPCHILDREN`)**:
+1. **Single-Instance Handshake & Window Activation**:
+   - Running a second instance detects the existing window handle across hidden/visible states, activates it, and exits cleanly without resetting active timers.
+2. **Zero Text Redraw Flicker (`WS_CLIPCHILDREN`)**:
    - All AutoHotkey `Gui` instances must include `+0x02000000` (`WS_CLIPCHILDREN`) in options. This prevents Windows from erasing child control backgrounds during 1-second timer text updates.
-2. **Native Arabic Right-to-Left Layout (`WS_EX_LAYOUTRTL`)**:
+3. **Native Arabic Right-to-Left Layout (`WS_EX_LAYOUTRTL`)**:
    - In Arabic mode, the main window applies `+E0x400000` (`WS_EX_LAYOUTRTL`) to natively mirror title bar, control positioning, checkbox layouts, and text flow.
-3. **Visibility Ghosting Mitigation (`WinRedraw`)**:
+4. **Visibility Ghosting Mitigation (`WinRedraw`)**:
    - Dynamic button toggles (e.g. switching from Pause/Reset to Break action buttons) must invoke `WinRedraw("ahk_id " gui.Hwnd)` to clear Windows GDI background ghosting artifacts.
-4. **Resilient Control Access & Defensive Parsing**:
+5. **Resilient Control Access & Defensive Bounds Validation**:
    - Control mutation (`.Value`, `.Text`) must be wrapped in `try` blocks to prevent unhandled runtime errors during GUI rebuilds.
-   - User inputs in Settings must use `SafeInt()` bounds checking to avoid unhandled integer conversion errors on empty fields.
-5. **32-Bit Tick Wraparound & Sleep Gap**:
-   - `TimerEngine` safely wraps tick rollover via `delta += 0x100000000` and validates `delta > 5000ms` (`SLEEP_GAP`) to detect system suspend/resume cycles accurately.
-6. **Responsive 16:9 Screen Scaling**:
+   - User inputs in Settings must use `SafeInt()` bounds checking ($1 \le \text{min} \le 180$, $1 \le \text{cycles} \le 12$) to avoid unhandled conversion errors on empty or out-of-range fields.
+6. **32-Bit Tick Wraparound & Sleep/Wake Gap Recovery**:
+   - `TimerEngine` safely wraps tick rollover via `delta += 0x100000000` and checks `delta > 5000ms` (`SLEEP_GAP`). If system suspension exceeds `idleThresholdMs`, the session resets to a fresh work countdown on wake.
+7. **Responsive 16:9 Screen Scaling**:
    - The exercise view calculates 16:9 proportional bounds dynamically for arbitrary monitor dimensions (768p up to 4K):
    ```autohotkey
    maxImgH := A_ScreenHeight - 140
    maxImgW := A_ScreenWidth - 40
-   imgW := Min(maxImgW, Integer(maxImgH * 16 / 9))
-   imgH := Integer(imgW * 9 / 16)
+   imgW := Min(maxImgH * 16 // 9, maxImgW)
+   imgH := imgW * 9 // 16
    ```

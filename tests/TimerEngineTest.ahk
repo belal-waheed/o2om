@@ -144,6 +144,38 @@ RunTests() {
     Assert.Equal(40 * 60 * 1000, engine.remaining, "Remaining time reset to full work duration after 2 ignored warnings")
     Assert.True(!engine.isWaitingBreak, "isWaitingBreak cleared after auto_work_reset")
 
+    ; Test 13: Sleep/Wake Gap Recovery (Long suspension resets to fresh work session)
+    engine.ResetToWork()
+    engine.remaining := 20 * 60 * 1000  ; simulate halfway through session
+    engine.lastTick  := A_TickCount - (6 * 60 * 1000) ; simulated 6 minute sleep gap (exceeds 5 min threshold)
+    resSleep := engine.Tick()
+    Assert.Equal(40 * 60 * 1000, engine.remaining, "Long sleep gap (> idleThreshold) resets remaining to fresh work duration")
+
+    ; Test 14: Break Elapsed during Sleep
+    engine.StartBreak()
+    engine.remaining := 2 * 60 * 1000 ; 2 minutes left of break
+    engine.lastTick  := A_TickCount - (10 * 60 * 1000) ; slept for 10 minutes
+    resBreakSleep := engine.Tick()
+    Assert.Equal("break_ended", resBreakSleep.type, "Break expiring during system sleep transitions cleanly to break_ended")
+    Assert.True(engine.isWaitingWork, "Engine enters isWaitingWork state after break expires during sleep")
+
+    ; Test 15: Progress Percentage Calculation
+    engine.ResetToWork()
+    Assert.Equal(0, engine.progressPercent, "Initial progress percentage is 0%")
+    engine.remaining := 20 * 60 * 1000 ; half elapsed
+    Assert.Equal(50, engine.progressPercent, "Half elapsed session reports 50% progress")
+
+    ; Test 16: Cycle Index Tracking
+    engine.completedCycles := 0
+    Assert.Equal(1, engine.currentCycle, "First cycle is cycle 1")
+    Assert.Equal(4, engine.totalCycles, "Total cycles matches settings (4)")
+    engine.completedCycles := 2
+    Assert.Equal(3, engine.currentCycle, "After 2 completed cycles, current cycle is 3")
+
+    ; Test 17: Settings Persistence (Sound & Cycles)
+    Assert.Equal(1, s.soundEnabled, "Sound notification setting is enabled by default")
+    Assert.Equal(4, s.cyclesBeforeLong, "Cycles before long break is 4 by default")
+
     Assert.Summary()
 }
 

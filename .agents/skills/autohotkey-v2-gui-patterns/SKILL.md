@@ -77,5 +77,5 @@ For Arabic or Hebrew GUI applications:
 
 ## 9. Headless Compilation Automation via Ahk2Exe CLI
 ```powershell
-pwsh -NoProfile -Command "Start-Process 'C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe' -ArgumentList '/in \"<Source.ahk>\" /out \"<Target.exe>\" /icon \"<Icon.ico>\" /base \"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe\"' -Wait"
+pwsh -NoProfile -Command "Start-Process 'C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe' -ArgumentList '/in \"<Source.ahk>\" /out \"<Target.exe>\" /icon \"<Icon.ico>\" /base \"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe\" /silent' -Wait"
 ```

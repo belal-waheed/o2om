@@ -6,9 +6,28 @@
 ;@Ahk2Exe-SetOrigFilename O2om.exe
 
 #Requires AutoHotkey v2.0
-#SingleInstance Force
+#SingleInstance Off
 Persistent
 SetWorkingDir(A_ScriptDir)
+
+; ---------------------------------------------------------------------------
+; Single-Instance Handshake (Activate existing running window if present)
+; ---------------------------------------------------------------------------
+DetectHiddenWindows(true)
+prevHwnd := 0
+try {
+    prevHwnd := WinExist("قُوم — O2om ahk_class AutoHotkeyGUI")
+    if (!prevHwnd)
+        prevHwnd := WinExist("O2om — Stand-Up Reminder ahk_class AutoHotkeyGUI")
+}
+
+if (prevHwnd) {
+    try WinShow("ahk_id " prevHwnd)
+    try WinRestore("ahk_id " prevHwnd)
+    try WinActivate("ahk_id " prevHwnd)
+    try DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Int", 32512, "Ptr"))
+    ExitApp()
+}
 
 ; ---------------------------------------------------------------------------
 ; Global Error Handler (Prevents crashes and logs errors safely)
@@ -65,8 +84,10 @@ class O2omApp {
     breakCt          := ""
 
     ; Control Handles
+    cycleText        := ""
     countdownText    := ""
     statusText       := ""
+    progressBar      := ""
     startupCheck     := ""
     ddlLanguage      := ""
 
@@ -74,9 +95,11 @@ class O2omApp {
     editWork         := ""
     editShortBreak   := ""
     editLongBreak    := ""
+    editCycles       := ""
     editEscalation   := ""
     editSnooze       := ""
     editIdle         := ""
+    chkSound         := ""
 
     ; Control Collections
     dashControls     := []
@@ -141,7 +164,7 @@ class O2omApp {
         mode := this.engine.isWaitingWork ? "wait_work" : (this.engine.isWaitingBreak ? "wait_break" : "normal")
         this.ToggleDashboardButtons(mode)
         
-        g.Show("w385 h" O2omStyles.WIN_HEIGHT " Hide")
+        g.Show("w" O2omStyles.WIN_WIDTH " h" O2omStyles.WIN_HEIGHT " Hide")
     }
 
     SetupBreakGui() {
@@ -170,11 +193,11 @@ class O2omApp {
         if (imgPath != "") {
             maxImgH := A_ScreenHeight - 140
             maxImgW := A_ScreenWidth - 40
-            imgW := Min(maxImgW, Integer(maxImgH * 16 / 9))
-            imgH := Integer(imgW * 9 / 16)
+            imgW := Min(maxImgH * 16 // 9, maxImgW)
+            imgH := imgW * 9 // 16
 
-            ix := (A_ScreenWidth - imgW) / 2
-            iy := (A_ScreenHeight - 80 - imgH) / 2
+            ix := (A_ScreenWidth - imgW) // 2
+            iy := (A_ScreenHeight - 80 - imgH) // 2
             try bg.AddPicture("x" ix " y" iy " w" imgW " h" imgH, imgPath)
         }
 
@@ -231,23 +254,34 @@ class O2omApp {
         O2omStartup.SetEnabled(val)
     }
 
-    SafeInt(val, defaultVal := 1, minVal := 1) {
+    ToggleSound() {
+        this.settings.soundEnabled := this.settings.soundEnabled ? 0 : 1
+        this.settings.Save()
+        if IsObject(this.chkSound)
+            try this.chkSound.Value := this.settings.soundEnabled
+        O2omTray.Setup(this)
+    }
+
+    SafeInt(val, minVal := 1, maxVal := 180) {
         valStr := Trim(String(val))
         if (!IsInteger(valStr))
             return 0
         intVal := Integer(valStr)
-        return (intVal < minVal) ? 0 : intVal
+        if (intVal < minVal || intVal > maxVal)
+            return 0
+        return intVal
     }
 
     ApplySettingsFromGui() {
-        workVal       := this.SafeInt(this.editWork.Value)
-        shortVal      := this.SafeInt(this.editShortBreak.Value)
-        longVal       := this.SafeInt(this.editLongBreak.Value)
-        escalationVal := this.SafeInt(this.editEscalation.Value)
-        snoozeVal     := this.SafeInt(this.editSnooze.Value)
-        idleVal       := this.SafeInt(this.editIdle.Value)
+        workVal       := this.SafeInt(this.editWork.Value, 1, 180)
+        shortVal      := this.SafeInt(this.editShortBreak.Value, 1, 60)
+        longVal       := this.SafeInt(this.editLongBreak.Value, 1, 90)
+        cyclesVal     := this.SafeInt(this.editCycles.Value, 1, 12)
+        escalationVal := this.SafeInt(this.editEscalation.Value, 1, 30)
+        snoozeVal     := this.SafeInt(this.editSnooze.Value, 1, 60)
+        idleVal       := this.SafeInt(this.editIdle.Value, 1, 60)
 
-        if (workVal <= 0 || shortVal <= 0 || longVal <= 0 || escalationVal <= 0 || snoozeVal <= 0 || idleVal <= 0) {
+        if (workVal <= 0 || shortVal <= 0 || longVal <= 0 || cyclesVal <= 0 || escalationVal <= 0 || snoozeVal <= 0 || idleVal <= 0) {
             MsgBox(O2omLang.Get("msg_invalid_input"), O2omLang.Get("app_title"), "Icon!")
             return
         }
@@ -260,9 +294,11 @@ class O2omApp {
         this.settings.workIntervalMin  := workVal
         this.settings.shortBreakMin    := shortVal
         this.settings.longBreakMin     := longVal
+        this.settings.cyclesBeforeLong := cyclesVal
         this.settings.escalationMin     := escalationVal
         this.settings.snoozeMin         := snoozeVal
         this.settings.idleThresholdMin  := idleVal
+        this.settings.soundEnabled     := (this.chkSound.Value == 1) ? 1 : 0
 
         this.settings.Save()
 
@@ -272,27 +308,28 @@ class O2omApp {
         this.SetupGui()
         this.ShowGui()
 
-        O2omNotify.Show(O2omLang.Get("app_title"), O2omLang.Get("msg_saved"))
+        O2omNotify.Show(O2omLang.Get("app_title"), O2omLang.Get("msg_saved"), 64, this.settings.soundEnabled)
     }
 
     Tick() {
         res := this.engine.Tick()
+        snd := this.settings.soundEnabled
 
         if (res.type == "waiting_break") {
             this.SwitchView(1)
             this.ToggleDashboardButtons("wait_break")
             this.ShowGui()
-            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_stage1"))
+            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_stage1"), 64, snd)
         } else if (res.type == "escalation") {
             toastMsg := (res.stage == 1) ? O2omLang.Get("toast_break_stage2") : O2omLang.Get("toast_break_stage3")
-            O2omNotify.Show(O2omLang.Get("toast_break_title"), toastMsg)
+            O2omNotify.Show(O2omLang.Get("toast_break_title"), toastMsg, 48, snd)
         } else if (res.type == "auto_work_reset") {
             ; Ignored both warnings and still in use -> dispatch final notification and resume work countdown
-            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_stage3"))
+            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_stage3"), 16, snd)
             this.ToggleDashboardButtons("normal")
             this.SwitchView(1)
         } else if (res.type == "break_ended") {
-            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_ended"), 64)
+            O2omNotify.Show(O2omLang.Get("toast_break_title"), O2omLang.Get("toast_break_ended"), 64, snd)
             if (this.breakGui && IsObject(this.breakGui)) {
                 try this.breakGui.Destroy()
                 this.breakGui := ""
@@ -322,8 +359,8 @@ class O2omApp {
         this.btnReset.Visible          := (mode == "normal")
         this.btnPause.Visible          := (mode == "normal")
         this.btnStartWork.Visible      := (mode == "wait_work")
-        this.btnStartBreak.Visible     := (mode == "wait_break")
         this.btnStartExercises.Visible := (mode == "wait_break")
+        this.btnStartBreak.Visible     := (mode == "wait_break")
         this.btnSnooze.Visible         := (mode == "wait_break")
 
         if (this.gui && this.gui.Hwnd)
@@ -334,6 +371,7 @@ class O2omApp {
         isPaused := this.engine.TogglePause()
         if IsObject(this.btnPause)
             this.btnPause.Text := O2omLang.Get(isPaused ? "btn_resume" : "btn_pause")
+        O2omTray.Setup(this)
         this.UpdateDisplay()
     }
 
@@ -383,6 +421,28 @@ class O2omApp {
         this.UpdateDisplay()
     }
 
+    OnSpacePressed() {
+        if (this.activeView == 1) {
+            if (this.engine.isWaitingBreak) {
+                this.StartBreakMode(true)
+            } else if (this.engine.isWaitingWork) {
+                this.StartWorkMode()
+            } else {
+                this.TogglePauseTimer()
+            }
+        }
+    }
+
+    OnEnterPressed() {
+        if (this.activeView == 4) {
+            this.ApplySettingsFromGui()
+        } else if (this.engine.isWaitingBreak) {
+            this.StartBreakMode(true)
+        } else if (this.engine.isWaitingWork) {
+            this.StartWorkMode()
+        }
+    }
+
     UpdateDisplay() {
         totalSec := Max(0, this.engine.remaining) // 1000
         mins := Format("{:02}", totalSec // 60)
@@ -391,6 +451,12 @@ class O2omApp {
 
         try this.countdownText.Value := timeStr
         try this.breakCt.Value := timeStr
+        try this.progressBar.Value := this.engine.progressPercent
+
+        try {
+            cycleBadge := Format(O2omLang.Get("status_cycle_badge"), this.engine.currentCycle, this.engine.totalCycles)
+            this.cycleText.Value := cycleBadge
+        }
 
         try {
             if (this.engine.isIdle)
@@ -411,7 +477,24 @@ class O2omApp {
         try this.gui.Title := O2omLang.Get("app_title")
         O2omTray.UpdateTooltip(timeStr)
     }
+
+    OnAppExit() {
+        try {
+            if (this.settings)
+                this.settings.Save()
+        }
+    }
 }
 
-; App Entry Point
-O2omApp()
+; App Entry Point & Singleton Registration
+global globalApp := O2omApp()
+OnExit((*) => globalApp.OnAppExit())
+
+; ---------------------------------------------------------------------------
+; Context-Sensitive Keyboard Navigation & Shortcuts
+; ---------------------------------------------------------------------------
+#HotIf WinActive("ahk_id " (globalApp && globalApp.gui ? globalApp.gui.Hwnd : 0))
+Space::globalApp.OnSpacePressed()
+Enter::globalApp.OnEnterPressed()
+Esc::globalApp.gui.Hide()
+#HotIf

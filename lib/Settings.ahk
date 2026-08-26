@@ -8,6 +8,7 @@ class O2omSettings {
     ; --- Settings State (Minutes & Preferences) ---
     language          := "ar"
     startWithWindows  := 1
+    soundEnabled      := 1
     workIntervalMin   := 40
     shortBreakMin     := 5
     longBreakMin      := 15
@@ -55,15 +56,17 @@ class O2omSettings {
         }
 
         try {
-            this.language          := IniRead(cfg, "General", "Language", "ar")
-            this.startWithWindows  := Integer(IniRead(cfg, "General", "StartWithWindows", 1))
-            this.workIntervalMin   := Integer(IniRead(cfg, "Timer", "WorkInterval", 40))
-            this.shortBreakMin     := Integer(IniRead(cfg, "Timer", "ShortBreak", 5))
-            this.longBreakMin      := Integer(IniRead(cfg, "Timer", "LongBreak", 15))
-            this.escalationMin     := Integer(IniRead(cfg, "Timer", "EscalationInterval", 2))
-            this.snoozeMin         := Integer(IniRead(cfg, "Timer", "SnoozeDuration", 5))
-            this.idleThresholdMin  := Integer(IniRead(cfg, "Timer", "IdleThreshold", 5))
-            this.cyclesBeforeLong  := Integer(IniRead(cfg, "Timer", "CyclesBeforeLong", 4))
+            rawLang                := IniRead(cfg, "General", "Language", "ar")
+            this.language          := (rawLang == "en") ? "en" : "ar"
+            this.startWithWindows  := (Integer(IniRead(cfg, "General", "StartWithWindows", 1)) == 1) ? 1 : 0
+            this.soundEnabled      := (Integer(IniRead(cfg, "General", "SoundEnabled", 1)) == 1) ? 1 : 0
+            this.workIntervalMin   := Max(1, Min(180, Integer(IniRead(cfg, "Timer", "WorkInterval", 40))))
+            this.shortBreakMin     := Max(1, Min(60,  Integer(IniRead(cfg, "Timer", "ShortBreak", 5))))
+            this.longBreakMin      := Max(1, Min(90,  Integer(IniRead(cfg, "Timer", "LongBreak", 15))))
+            this.escalationMin     := Max(1, Min(30,  Integer(IniRead(cfg, "Timer", "EscalationInterval", 2))))
+            this.snoozeMin         := Max(1, Min(60,  Integer(IniRead(cfg, "Timer", "SnoozeDuration", 5))))
+            this.idleThresholdMin  := Max(1, Min(60,  Integer(IniRead(cfg, "Timer", "IdleThreshold", 5))))
+            this.cyclesBeforeLong  := Max(1, Min(12,  Integer(IniRead(cfg, "Timer", "CyclesBeforeLong", 4))))
         } catch {
             this.ResetDefaults()
         }
@@ -77,6 +80,7 @@ class O2omSettings {
         try {
             IniWrite(this.language,         cfg, "General", "Language")
             IniWrite(this.startWithWindows, cfg, "General", "StartWithWindows")
+            IniWrite(this.soundEnabled,     cfg, "General", "SoundEnabled")
             IniWrite(this.workIntervalMin,  cfg, "Timer", "WorkInterval")
             IniWrite(this.shortBreakMin,    cfg, "Timer", "ShortBreak")
             IniWrite(this.longBreakMin,     cfg, "Timer", "LongBreak")
@@ -90,6 +94,7 @@ class O2omSettings {
     ResetDefaults() {
         this.language         := "ar"
         this.startWithWindows := 1
+        this.soundEnabled     := 1
         this.workIntervalMin  := 40
         this.shortBreakMin    := 5
         this.longBreakMin     := 15
