@@ -1,14 +1,14 @@
-# O2om (قُوم) — Stand-Up Break Timer & Posture Health Reminder for Windows
+# O2om (قُوم) — Stand-Up Break Timer & Ergonomic Posture Coach for Windows
 
-**O2om** (derived from the Arabic word **قُوم**, meaning *"Stand up!"*) is an open-source, lightweight desktop health utility for Windows built with AutoHotkey v2. It helps software engineers, gamers, remote workers, and desk users prevent sedentary fatigue, reduce eye strain, and maintain healthy posture.
+**O2om** (derived from the Arabic imperative **قُوم**, meaning *"Stand up!"*) is an open-source, high-craft desktop health and posture utility for Windows built with AutoHotkey v2. It helps software engineers, remote professionals, gamers, and long-session desk workers eliminate sedentary fatigue, correct posture, reduce digital eye strain, and build consistent daily movement habits.
 
 ---
 
 ## Download O2om
 
-[**Download Latest Executable (O2om.exe)**](https://github.com/BelalWaheed/o2om/releases/latest/download/O2om.exe)
+[**Download Latest Standalone Executable (O2om.exe)**](https://github.com/BelalWaheed/o2om/releases/latest/download/O2om.exe)
 
-_No installation required! Download `O2om.exe`, double-click to run, and it will sit quietly in your System Tray._
+*Zero installation required! Download `O2om.exe`, double-click to launch, and it will sit quietly in your System Tray consuming < 15MB of RAM.*
 
 ---
 
@@ -16,193 +16,116 @@ _No installation required! Download `O2om.exe`, double-click to run, and it will
 
 | Attribute | Specification |
 | :--- | :--- |
-| **Version** | v2.5.3 |
-| **Category** | Desktop Health & Ergonomics Utility |
-| **Language & Framework** | AutoHotkey v2.0+ |
+| **Version** | v3.0.0 |
+| **Category** | Desktop Ergonomics & Movement Coach |
+| **Language & Framework** | AutoHotkey v2.0+ (Strict v2 syntax) |
 | **Platform Support** | Windows 10 / Windows 11 (64-bit) |
-| **Localization** | Native Arabic (RTL) & English |
-| **Theme** | Catppuccin Mocha Dark Palette |
+| **Localization** | Native Arabic (`ar`, RTL mirrored) & English (`en`, LTR) |
+| **Aesthetic Theme** | Modern Obsidian Dark Palette with DWM Immersive Dark Titlebar |
 | **Display Support** | Responsive 16:9 stretch graphics (768p to 4K) |
+| **Memory Footprint** | < 15MB RAM |
 | **License** | Open Source |
+
+---
+
+## What's New in v3.0 (Complete Redesign)
+
+1. **Multi-Mode Ergonomic Engine**:
+   - **Stand-Up & Posture Mode (Default)**: 40m focus / 5m active stretches.
+   - **20-20-20 Eye Strain Guard**: 20m focus / 20s 20-foot distance eye relaxation.
+   - **Deep Work / Pomodoro Mode**: 25m focus / 5m short break / 15m long break.
+   - **Custom Precision Mode**: Tailor intervals to your exact routine.
+2. **Interactive Guided Break Overlay**:
+   - Replaces static overlays with a step-by-step stretch coach (Chest Opener, Neck Retraction, Hip Flexor Lunge, Spine Twist, 20-20-20 Eye Rest).
+   - Dedicated per-exercise countdown timers, exercise instructions in Arabic/English, and audio chimes.
+3. **Daily Health Analytics & Streaks**:
+   - Track completed stands against customizable daily goals (e.g. 8 stands/day).
+   - Track total daily focus minutes, multi-day consecutive streaks, and lifetime metrics in `o2om_stats.ini`.
+4. **Draggable Mini-Pill Floating Widget**:
+   - A minimalist, always-on-top 160x46px floating pill showing status dot, countdown, and quick pause button. Double-click anywhere to restore the full Dashboard.
+5. **Modern Obsidian Dark Design**:
+   - Native Windows 10/11 DWM dark titlebar integration (`DWMWA_USE_IMMERSIVE_DARK_MODE`).
+   - High-contrast tabular numbers that never shift or jitter horizontally.
+   - Zero redraw flickering via `WS_CLIPCHILDREN` (`+0x02000000`).
 
 ---
 
 ## Quick User Guide
 
-### Key Features
-- **Auto-Starting Work Timer**: Session countdown starts automatically on launch or break completion.
-- **Pause & Resume Controls**: Freeze and resume your work timer anytime with a single click.
-- **Fullscreen Desk Exercise Guidance**: Displays clean 16:9 posture stretch guides (Neck Retraction, Shoulder Rolls, Seated Torso Twist, Standing Hamstring Stretch, Eye Relaxation 20-20-20).
-- **Physical Idle Detection**: Automatically pauses when physical input (`A_TimeIdlePhysical`) exceeds the inactivity threshold.
-- **Native Dual Localization**: Arabic (`ar`) by default with Windows Right-To-Left (`WS_EX_LAYOUTRTL`) layout mirroring, plus English (`en`).
+### 1. Launching O2om
+- Double-click `O2om.exe` (or `O2om.ahk` when running from source).
+- Your session countdown begins immediately in the System Tray.
 
-### Key Usage Steps
-1. **Launch**: Double-click `O2om.exe`. Your work countdown starts automatically.
-2. **Pause / Resume**: Click **Pause** anytime to freeze the timer if you step away from your desk.
-3. **Break Prompt (`00:00`)**: Choose between **Tray Break**, **Fullscreen Exercises**, or **Snooze** (5 min delay).
-4. **Post-Break**: When the break finishes, click **"Start Work"** to begin your next session.
-5. **Settings & Language**: Switch seamlessly between **العربية** and **English** from the Settings tab.
+### 2. Session Controls
+- **Pause / Resume**: Click **Pause** or hit `Space` when the window is active to freeze the timer.
+- **Switch Modes**: Click **Stand-Up**, **Eye Guard**, or **Pomodoro** pills at the top to change modes instantly.
+- **Dock to Mini-Pill**: Click **Mini-Pill** to collapse the dashboard into an unobtrusive desktop floating widget. Double-click the pill to restore.
+
+### 3. Taking a Break
+- When the countdown reaches `00:00`, O2om alerts you with an Action Center notification and audio chime.
+- Choose **Start Guided Stretches** for the fullscreen workout coach, **Start Break Only** for quiet background mode, or **Snooze** for a 5-minute delay.
+- When the break ends, your daily stand count increments and O2om prompts you with **"Start Work"** when you're ready.
 
 ---
 
-## Want More Customization? (Developer Guide)
+## Developer Guide & Repository Structure
 
-### Prerequisites & Source Setup
-To run or modify O2om from source:
-1. Windows OS (10 or 11).
+### Prerequisites
+1. Windows 10 or 11 (64-bit).
 2. [AutoHotkey v2.0+](https://www.autohotkey.com/) installed.
-3. Double-click `O2om.ahk` to run from source.
 
----
-
-### System Flowchart
-
-```mermaid
-flowchart TD
-    Start([Launch App / Boot]) --> Work[Active Work Session]
-    Work -->|Click Pause| Paused[Paused State]
-    Paused -->|Click Resume| Work
-    Work -->|Inactivity > Idle Threshold| Idle[User Away / Idle]
-    Idle -->|Physical Activity Detected| Work
-
-    Work -->|Timer Hits 00:00| BreakPrompt{Break Prompt}
-
-    BreakPrompt -->|Click Snooze| SnoozeDelay[Snooze 5 Min]
-    SnoozeDelay --> Work
-
-    BreakPrompt -->|Tray Only| QuietBreak[Active Break - Tray]
-    BreakPrompt -->|Fullscreen| StretchBreak[Active Break - Fullscreen Stretches]
-
-    QuietBreak -->|Timer Hits 00:00| WaitingWork[Waiting Work - Prompt]
-    StretchBreak -->|Timer Hits 00:00 / ESC / Start Work| WaitingWork
-
-    WaitingWork -->|Click Start Work| Work
-```
-
----
-
-### Repository & Folder Structure
-
+### Directory Structure
 ```text
 O2om/
-├── O2om.ahk                  # Main Entry Point & Orchestrator (O2omApp)
-├── O2om.exe                  # Standalone Compiled Executable
-├── o2om_config.ini           # User Settings Persistence File
-├── README.md                 # Complete Documentation
-├── llms.txt                  # AI Agent Machine-Readable Summary
-├── assets/                   # Application Binary & Graphic Assets
-│   ├── o2om.ico              # Main Application & System Tray Icon
-│   └── exercises_bg.png      # 16:9 Clean 5-Panel Gesture Illustration
-├── docs/                     # Living Technical Documentation
-│   ├── overview.md           # Product vision, features, and specs
-│   ├── architecture.md       # Layered system architecture & invariants
-│   ├── workflows.md          # State machine flows & sequence diagrams
-│   └── adr/                  # Architecture Decision Records
-│       └── 0001-autohotkey-v2-architecture.md
-├── lib/                      # Core Modular Codebase
-│   ├── TimerEngine.ahk       # State Machine & Countdown Math (O2omEngine)
-│   ├── Settings.ahk          # INI File Manager (O2omSettings)
-│   ├── Language.ahk          # Localization Dictionary (O2omLang)
-│   ├── Styles.ahk            # Design Tokens & Palette (O2omStyles)
-│   ├── Notifications.ahk     # Native Windows Toast & Sound (O2omNotify)
-│   ├── Tray.ahk               # System Tray Menu & Tooltip (O2omTray)
-│   ├── Startup.ahk            # Windows Autostart Registry Manager (O2omStartup)
-│   └── Gui/                  # Presentation Layer
-│       ├── Dashboard.ahk      # Main Timer View Controls (O2omDashboardView)
-│       └── SettingsView.ahk   # Configuration Form Controls (O2omSettingsView)
-└── .agents/                  # AI Agent Rules & Engineering Skills
-    ├── AGENTS.md             # Project Coding & Layout Invariants
-    └── skills/               # Reusable AutoHotkey v2 Patterns
-        └── autohotkey-v2-gui-patterns/SKILL.md
+├── O2om.ahk                       # Main Entry Point & Orchestrator (O2omApp)
+├── O2om.exe                       # Standalone Compiled Executable
+├── o2om_config.ini                # Persistent Configuration INI File
+├── o2om_stats.ini                 # Daily Health Metrics & Streak History
+├── assets/
+│   ├── o2om.ico                   # Application & System Tray Icon
+│   └── exercises_bg.png           # 16:9 Clean 5-Panel Posture Illustration
+├── src/
+│   ├── Core/
+│   │   ├── TimerEngine.ahk        # State Machine & Multi-Mode Engine
+│   │   ├── HealthTracker.ahk      # Daily Stands, Focus Hours, & Streak Counter
+│   │   └── ExerciseRoutines.ahk   # Structured Exercise Progression & Scaling
+│   ├── Services/
+│   │   ├── SettingsRepo.ahk       # INI Storage & Safe Bounds Validation
+│   │   ├── SoundService.ahk       # Audio Chimes & Notifications
+│   │   ├── NotificationService.ahk# Action Center Toasts with AUMID
+│   │   ├── IdleMonitor.ahk        # Physical Idle Absence Detection
+│   │   ├── StartupService.ahk     # Windows Autostart Registry Adapter
+│   │   └── Resources.ahk          # Asset Resolution & FileInstall Extraction
+│   ├── Ui/
+│   │   ├── Theme.ahk              # Obsidian Dark Tokens & DWM API
+│   │   ├── Tray.ahk               # System Tray Menu & Dynamic Tooltip
+│   │   └── Views/
+│   │       ├── DashboardView.ahk  # Primary Dashboard View
+│   │       ├── StatsView.ahk      # Health Metrics & Streak View
+│   │       ├── SettingsView.ahk   # Configuration Panel
+│   │       ├── BreakOverlayView.ahk # Guided Fullscreen Stretch Overlay
+│   │       └── MiniPillView.ahk   # Floating Draggable Micro-Widget
+│   └── Locale/
+│       └── Language.ahk           # Bilingual Arabic & English Dictionary
+├── docs/                          # Living System Documentation
+└── tests/
+    └── TimerEngineTest.ahk        # Comprehensive Unit Test Suite
 ```
 
-#### Architecture Documentation:
-For comprehensive technical documentation, refer to the [`docs/`](docs/) directory:
-- [**Product Overview & Vision**](docs/overview.md)
-- [**System Architecture & Invariants**](docs/architecture.md)
-- [**State Machine & Sequence Workflows**](docs/workflows.md)
-- [**ADR 0001: AutoHotkey v2 Architecture**](docs/adr/0001-autohotkey-v2-architecture.md)
+### Running Tests
+Execute the unit test suite with AutoHotkey v2:
+```powershell
+pwsh -NoProfile -Command "& 'C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe' tests/TimerEngineTest.ahk"
+```
 
----
-
-### Critical Edge Cases & Engineering Invariants
-
-1. **Zero Text Redraw Flicker (`WS_CLIPCHILDREN`)**:
-   - All `Gui` initializations include `+0x02000000` (`WS_CLIPCHILDREN`) to eliminate text control flickering during 1-second updates.
-2. **Native Windows RTL Layout Mirroring (`WS_EX_LAYOUTRTL`)**:
-   - Arabic mode applies `+E0x400000` (`WS_EX_LAYOUTRTL`) to the main window for native control mirroring.
-3. **Visibility Ghosting Cleanup (`WinRedraw`)**:
-   - `ToggleDashboardButtons()` calls `WinRedraw("ahk_id " gui.Hwnd)` after toggling control visibility.
-4. **Destroyed Control Exception Guarding**:
-   - Control property updates in `UpdateDisplay()` are wrapped in `try` blocks to prevent crash race conditions.
-5. **32-Bit Tick Wraparound & Sleep/Wake Gap**:
-   - `TimerEngine.ahk` handles negative `delta` rollover (`delta += 0x100000000`) and sleep gaps (`SLEEP_GAP > 5000ms`).
-6. **Responsive Screen Scaling**:
-   - Exercise view dynamically calculates 16:9 image boundaries for 768p up to 4K displays.
-
----
-
-### INI File Configuration (`o2om_config.ini`)
-
-Advanced users can edit `o2om_config.ini` directly while the app is closed:
-
-```ini
-[General]
-Language=ar
-
-[Timer]
-WorkInterval=40
-ShortBreak=5
-LongBreak=15
-EscalationInterval=2
-SnoozeDuration=5
-IdleThreshold=5
-CyclesBeforeLong=4
+### Compiling Standalone Executable
+Compile silently via Ahk2Exe CLI:
+```powershell
+pwsh -NoProfile -Command "& 'C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe' /in 'O2om.ahk' /out 'O2om.exe' /icon 'assets\o2om.ico' /base 'C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe' /silent"
 ```
 
 ---
 
-### How to Compile to `.exe`
-
-To build `O2om.exe` from source using the AutoHotkey Compiler GUI (Ahk2Exe):
-
-1. Open **AutoHotkey Dash** (press `Win Key` and search for **AutoHotkey Dash**).
-2. Click **Compile** to launch **Ahk2Exe**.
-3. Set your parameters:
-   - **Source (.ahk)**: Select `O2om.ahk`
-   - **Custom Icon (.ico)**: Select `assets\o2om.ico`
-   - **Base File**: Choose `AutoHotkey64.exe` (v2.0+)
-4. Click **Convert**!
-
----
-
-## Frequently Asked Questions (FAQ)
-
-### What is the best open-source stand-up break reminder for Windows?
-O2om (قُوم) is a lightweight AutoHotkey v2 desktop utility for Windows that automatically prompts users to take posture stretch breaks, features a 16:9 guided desk exercise screen, auto-pauses when away from the computer, and supports native Arabic Right-To-Left layout.
-
-### How does O2om handle physical inactivity and sleep/wake cycles?
-O2om continuously monitors `A_TimeIdlePhysical` (keyboard and mouse input). If physical inactivity exceeds the configured threshold (default: 5 minutes), O2om automatically pauses the work timer. System sleep and hibernation events are detected via millisecond tick gaps (> 5000ms), preventing stale break notifications upon waking.
-
-### How does native Arabic Right-to-Left (RTL) layout work in AutoHotkey v2?
-When Arabic mode (`ar`) is active, O2om applies `+E0x400000` (`WS_EX_LAYOUTRTL`) to the main Gui window. Windows GDI natively mirrors title bars, control positioning, text alignment, and checkbox positions for native Arabic UX.
-
----
-
-## AI Agent Integration (`.agents/`)
-
-This repository is equipped with an **AI Agent Context System** inside `.agents/`.
-
-When an AI coding assistant (such as **Google Antigravity / Gemini**) opens this codebase, it automatically loads:
-1. **[.agents/AGENTS.md](file:///b:/projects/personal/O2om/.agents/AGENTS.md)**: Workspace invariants (Arabic RTL `+E0x400000` rules, `WS_CLIPCHILDREN` `+0x02000000` zero-flicker mandates, `WinRedraw` ghosting cleanup, text-free exercise graphic constraints, and post-break window destruction flows).
-2. **[.agents/skills/autohotkey-v2-gui-patterns/SKILL.md](file:///b:/projects/personal/O2om/.agents/skills/autohotkey-v2-gui-patterns/SKILL.md)**: Reusable technical patterns for flicker-free AHK v2 GUI development.
-
----
-
-## License & Copyright
-
-Copyright (c) 2026 O2om Team. Free for personal wellness and productivity.
-
----
-
-> Its Never Too Late For **COFFEE**
+## License & Author
+- **Author**: Belal Waheed
+- **License**: MIT Open Source License

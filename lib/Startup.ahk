@@ -1,32 +1,8 @@
 ; ---------------------------------------------------------------------------
-; O2om — Windows Startup Registry Manager
+; O2om — Startup Shim (Forwarding to src/Services/StartupService.ahk)
 ; ---------------------------------------------------------------------------
 
-class O2omStartup {
-    static REG_KEY   := "HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
-    static REG_VALUE := "O2om"
+#Include ../src/Services/StartupService.ahk
 
-    static IsEnabled() {
-        try return (RegRead(this.REG_KEY, this.REG_VALUE) != "")
-        catch
-            return false
-    }
-
-    static SetEnabled(enable) {
-        if (enable) {
-            exePath := A_IsCompiled ? ('"' A_ScriptFullPath '"') : ('"' A_AhkPath '" "' A_ScriptFullPath '"')
-            try RegWrite(exePath, "REG_SZ", this.REG_KEY, this.REG_VALUE)
-        } else {
-            try RegDelete(this.REG_KEY, this.REG_VALUE)
-        }
-    }
-
-    static SyncWithSettings(shouldBeEnabled) {
-        current := this.IsEnabled()
-        if (shouldBeEnabled && !current) {
-            this.SetEnabled(true)
-        } else if (!shouldBeEnabled && current) {
-            this.SetEnabled(false)
-        }
-    }
+class O2omStartup extends O2omStartupService {
 }

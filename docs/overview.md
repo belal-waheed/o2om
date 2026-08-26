@@ -1,37 +1,39 @@
 # O2om (قُوم) — Overview & Product Vision
 
-**O2om** (derived from the Arabic imperative **قُوم**, meaning *"Stand up!"*) is a lightweight, open-source desktop health and ergonomics utility for Windows built in **AutoHotkey v2.0+**. It is designed to mitigate sedentary fatigue, reduce musculoskeletal strain, and prevent screen-induced eye fatigue for engineers, remote professionals, gamers, and long-session desk workers.
+**O2om** (derived from the Arabic imperative **قُوم**, meaning *"Stand up!"*) is an open-source, high-craft desktop health, posture, and ergonomics utility for Windows built in **AutoHotkey v2.0+**. It mitigates sedentary fatigue, musculoskeletal strain, and digital eye strain for software engineers, remote professionals, gamers, and desk workers.
 
 ---
 
 ## 1. Core Problem & Product Value
 
-Prolonged seated computer use leads to reduced blood circulation, postural degradation (slumped shoulders, forward neck tilt), and digital eye fatigue. Most desktop break timers suffer from three common issues:
-1. **Intrusive disruption**: Locking the desktop aggressively during critical workflows.
-2. **Resource bloat**: Consuming hundreds of megabytes of RAM via heavy web runtimes (Electron/Webview).
-3. **Lack of actionable guidance**: Notifying users to "take a break" without visual exercise instruction.
+Prolonged seated desk work degrades circulation, weakens posterior posture muscles (forward head tilt, rounded shoulders), and causes computer vision syndrome. Existing solutions suffer from three fundamental flaws:
+1. **Aggressive Disruption**: Locking user screens abruptly in the middle of active workflows.
+2. **Heavy Resource Bloat**: Consuming 200MB–400MB RAM through bloated Electron/Chromium runtimes.
+3. **Passive Reminders Without Actionable Guidance**: Informing users to "take a break" without structured physical routines or interactive progression.
 
-**O2om** resolves these problems by providing:
-- A non-intrusive, native Windows utility consuming < 15MB RAM.
-- Integrated 16:9 full-screen posture stretch and eye relaxation illustrations.
-- Automatic physical idle detection (`A_TimeIdlePhysical`) that pauses timers when stepping away from the desk.
-- Native Arabic (Right-to-Left) and English dual-language architecture.
+**O2om (v3.0)** resolves these problems with:
+- **Ultra-Lightweight Footprint**: Native Windows execution consuming < 15MB RAM and near-zero idle CPU.
+- **Modern Obsidian Dark Craftsmanship**: DWM immersive dark titlebar integration, high-contrast tabular typography, and zero generic AI clichés or emojis.
+- **Multi-Mode Ergonomics**: Ergonomic Stand-Up & Posture mode (40m/5m), 20-20-20 Eye Strain Guard (20m/20s), Deep Work Pomodoro (25m/5m/15m), and Custom Intervals.
+- **Interactive Guided Stretch Routines**: Step-by-step stretch coach with per-exercise countdown timers, audio transitions, and clean 16:9 posture illustrations.
+- **Daily Health Analytics & Streaks**: Tracks completed stands against daily goals, total focus time, and continuous multi-day streaks.
+- **Compact Floating Mini-Pill**: Draggable micro-timer widget that docks to any screen edge with double-click dashboard restoration.
+- **Physical Inactivity Intelligence**: `A_TimeIdlePhysical` hardware polling suspends work countdowns when users step away, but never interrupts active stretching breaks.
+- **Native Dual Localization**: Arabic (`ar`) default with `+E0x400000` (`WS_EX_LAYOUTRTL`) mirroring, alongside English (`en`).
 
 ---
 
-## 2. Key Features
+## 2. Key Capabilities & Subsystems
 
-- **Automated Work Countdown**: Automatically begins a work session upon launch and after completing break sessions.
-- **Physical Inactivity Detection**: Senses user absence via physical input hardware polling (`A_TimeIdlePhysical`) and automatically suspends countdown.
-- **Flexible Break Controls**:
-  - *Start Break (Tray Only)*: Minimalist quiet break running in the background/tray.
-  - *Start Exercises (Fullscreen)*: Displays clean 16:9 posture stretch exercises.
-  - *Snooze*: Postpones the break for a configurable delay (default: 5 minutes).
-  - *Pause / Resume*: Manually freezes the session at any time.
-- **Escalation Notification System**: Escalates break reminders at configurable intervals if a break prompt remains unattended.
-- **Post-Break Workflow Control**: Closes exercise overlays cleanly at `00:00` and displays a manual **"Start Work"** button to guarantee users are ready before the next work interval begins.
-- **Native Dual Localization**: Arabic (`ar`) with native Right-To-Left layout mirroring (`WS_EX_LAYOUTRTL`), plus English (`en`).
-- **Windows Integration**: Native toast notifications with AppUserModelID (`O2om.StandUpReminder`) and optional startup registry integration.
+| Subsystem | Description |
+| :--- | :--- |
+| **Multi-Mode Timer Engine** | Non-blocking state machine supporting Stand-Up, Eye Guard, Pomodoro, and Custom modes with sleep/wake gap recovery and 32-bit tick wrap safety. |
+| **Guided Break Overlay** | Fullscreen immersive stretch overlay guiding users through 5 targeted mobility exercises with individual timers, instructions, and chimes. |
+| **Health Analytics Tracker** | Records daily stands, compares against customizable daily goals, logs focus hours, and manages multi-day streaks across midnight rollovers. |
+| **Floating Mini-Pill Widget** | Always-on-top, draggable 160x46px micro widget displaying mode indicator, countdown, and pause toggle. |
+| **Escalation Notification Engine** | Escalates unacknowledged break reminders across two warning stages before cleanly resetting work sessions for active users. |
+| **Desktop Audio Chimes** | Subtle, pleasant native audio feedback for session completions, exercise transitions, and escalation warnings. |
+| **Action Center Toasts** | Persistent Windows Action Center toasts linked via AppUserModelId (`O2om.StandUpReminder`) without blue informational icons. |
 
 ---
 
@@ -39,14 +41,14 @@ Prolonged seated computer use leads to reduced blood circulation, postural degra
 
 | Attribute | Specification |
 | :--- | :--- |
-| **Version** | v2.5.3 |
+| **Version** | v3.0.0 |
 | **Language / Framework** | AutoHotkey v2.0+ (Strict v2 syntax) |
 | **Target OS** | Windows 10 / Windows 11 (64-bit) |
-| **Architecture Pattern** | Decoupled State Engine + Modular View Controller |
-| **Styling Tokens** | Catppuccin Mocha Dark Palette |
-| **Configuration Storage** | INI File (`o2om_config.ini`) |
-| **Binary Distribution** | Standalone Compiled Executable (`O2om.exe` via Ahk2Exe) |
-| **Default Language** | Arabic (`ar`) with native `+E0x400000` RTL layout |
+| **Architecture Pattern** | Layered Clean Architecture (`Core` / `Services` / `Ui` / `Locale`) |
+| **Styling Archetype** | Modern Obsidian Dark Palette (`#0D0E15`, `#161822`, `#1F2333`) |
+| **Configuration Storage** | INI Storage (`o2om_config.ini` & `o2om_stats.ini`) |
+| **Binary Distribution** | Standalone Compiled Executable (`O2om.exe` via Ahk2Exe CLI) |
+| **Default Language** | Arabic (`ar`) with native `+E0x400000` RTL layout mirroring |
 
 ---
 
@@ -54,36 +56,37 @@ Prolonged seated computer use leads to reduced blood circulation, postural degra
 
 ```text
 O2om/
-├── O2om.ahk                  # Application Entry Point & Orchestrator (O2omApp)
-├── O2om.exe                  # Standalone Compiled 64-Bit Executable
-├── o2om_config.ini           # Persistent User Configuration INI File
-├── README.md                 # Project README and Quick Start
-├── llms.txt                  # Machine-readable AI Agent Summary
-├── assets/                   # Graphical & Binary Assets
-│   ├── o2om.ico              # Main Application & System Tray Icon
-│   └── exercises_bg.png      # 16:9 Posture Stretch Graphic Guide
-├── docs/                     # Living Technical Documentation
-│   ├── overview.md           # Product vision, features, and tech specs
-│   ├── architecture.md       # Layered architecture, state machine, invariants
-│   ├── workflows.md          # State workflows and sequence diagrams
-│   └── adr/                  # Architecture Decision Records
-│       └── 0001-autohotkey-v2-architecture.md
-├── lib/                      # Core Domain & Infrastructure Libraries
-│   ├── Resources.ahk         # Asset Bundling & Dynamic Extractor (O2omResources)
-│   ├── TimerEngine.ahk       # Non-blocking Countdown & Pomodoro State Engine
-│   ├── Settings.ahk          # INI Settings Manager (O2omSettings)
-│   ├── Language.ahk          # Dual-language Localization Dictionary (O2omLang)
-│   ├── Styles.ahk            # Theme Colors & UI Design Tokens (O2omStyles)
-│   ├── Notifications.ahk     # Windows Toast & Action Center Dispatcher (O2omNotify)
-│   ├── Startup.ahk           # Windows Startup Registry Manager (O2omStartup)
-│   ├── Tray.ahk              # System Tray Menu & Tooltip Manager (O2omTray)
-│   └── Gui/                  # Presentation Layer
-│       ├── Dashboard.ahk     # Main Timer & Action Controls View (O2omDashboardView)
-│       └── SettingsView.ahk  # User Configuration Form View (O2omSettingsView)
-├── tests/                    # Automated Unit Testing Suite
-│   └── TimerEngineTest.ahk   # State Engine & Resource Assertion Suite
-└── .agents/                  # AI Agent Context & Reusable Engineering Skills
-    ├── AGENTS.md             # Repository Invariants & Layout Safeguards
-    └── skills/
-        └── autohotkey-v2-gui-patterns/SKILL.md
+├── O2om.ahk                  # Application Entry Point & Singleton Orchestrator (O2omApp)
+├── O2om.exe                  # Standalone Compiled Portable Executable
+├── o2om_config.ini           # User Preferences & Interval Configurations
+├── o2om_stats.ini            # Daily Health Metrics & Streak History
+├── assets/
+│   ├── o2om.ico              # High-Resolution Application & System Tray Icon
+│   └── exercises_bg.png      # 16:9 Clean 5-Panel Posture & Stretch Illustration
+├── src/
+│   ├── Core/
+│   │   ├── TimerEngine.ahk   # Pure Domain State Machine & Mode Engine
+│   │   ├── HealthTracker.ahk # Daily Stands, Focus Hours, & Streak Counter
+│   │   └── ExerciseRoutines.ahk # Structured Exercise Progression & Scaling
+│   ├── Services/
+│   │   ├── SettingsRepo.ahk  # INI Repository with Safe Bounds Validation
+│   │   ├── SoundService.ahk  # Audio Chimes & Audio Notifications
+│   │   ├── NotificationService.ahk # Action Center Toasts with AUMID
+│   │   ├── IdleMonitor.ahk   # Hardware Keyboard/Mouse Idle State Adapter
+│   │   ├── StartupService.ahk# Windows Autostart Registry Adapter
+│   │   └── Resources.ahk     # Asset Extraction & Resolution
+│   ├── Ui/
+│   │   ├── Theme.ahk         # Obsidian Palette Tokens & DWM Dark Titlebar
+│   │   ├── Tray.ahk          # System Tray Menu & Dynamic Tooltip
+│   │   └── Views/
+│   │       ├── DashboardView.ahk    # Primary Dashboard View
+│   │       ├── StatsView.ahk        # Health Metrics & Streak View
+│   │       ├── SettingsView.ahk     # Configuration Panel
+│   │       ├── BreakOverlayView.ahk # Guided Fullscreen Stretch Overlay
+│   │       └── MiniPillView.ahk     # Floating Draggable Micro-Widget
+│   └── Locale/
+│       └── Language.ahk      # Comprehensive Arabic & English Dictionary
+├── docs/                     # Living System Documentation
+└── tests/
+    └── TimerEngineTest.ahk   # Automated Comprehensive Unit Test Suite
 ```
