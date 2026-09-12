@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v2/tooling/cli/schema.json",
+  "productName": "O2om",
+  "version": "4.0.0",
+  "identifier": "com.o2om.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "O2om — Stand-Up & Focus",
+        "label": "main",
+        "url": "index.html",
+        "width": 420,
+        "height": 490,
+        "minWidth": 380,
+        "minHeight": 460,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false,
+        "center": true,
+        "visible": true
+      },
+      {
+        "title": "O2om Pill",
+        "label": "pill",
+        "url": "index.html?win=pill",
+        "width": 176,
+        "height": 42,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
+        "title": "O2om — Stretch & Break",
+        "label": "break_overlay",
+        "url": "index.html?win=break_overlay",
+        "width": 720,
+        "height": 520,
+        "resizable": true,
+        "decorations": true,
+        "center": true,
+        "alwaysOnTop": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:o2om.db"]
+    }
+  }
+}

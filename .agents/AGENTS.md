@@ -1,31 +1,34 @@
 # O2om Project Rules & Invariants
 
-These rules apply to all work within the `O2om` repository:
+These rules apply to all development within the O2om repository (Tauri v2 + Rust + React 19):
 
 ## 1. Localization & RTL Architecture
-- Arabic (`ar`) is the default language.
-- The main GUI MUST apply `+E0x400000` (`WS_EX_LAYOUTRTL`) when in Arabic mode to guarantee native right-to-left control mirroring and text alignment.
+- Arabic (r) is the default language.
+- The React application root dynamically sets document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr' and lang = lang to guarantee native right-to-left layout and mirrored spacing.
+- Tabular numeric displays (TabularTimer, countdown digits) MUST maintain ontVariantNumeric: 'tabular-nums' and ontFeatureSettings: '\ tnum\' to eliminate layout jitter during countdown ticks.
 
-## 2. GUI Redraw, Coordinates & Cursor Management
-- Every AutoHotkey `Gui` instance MUST include `+0x02000000` (`WS_CLIPCHILDREN`) in its options string to eliminate text control redraw flickering during 1-second timer updates.
-- Never place two controls (such as a Progress bar separator and a Text label) at the exact same Y position. Overlapping controls cause GDI mouse cursor flickering and repaint churn.
-- Whenever toggling control visibilities in dynamic layouts, call `WinRedraw("ahk_id " gui.Hwnd)` to prevent Windows GDI background ghosting artifacts.
-- When opening or restoring the GUI, call `try DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Int", 32512, "Ptr"))` to immediately release Windows `IDC_APPSTARTING` loading cursor spinners.
-- Wrap all control property updates (`.Value`, `.Text`) inside `try` blocks to prevent crashes during GUI destruction or rebuilding.
+## 2. Multi-Window Topology & Win32 ToolWindow Invariants
+- The application employs three distinct window instances defined in src-tauri/tauri.conf.json:
+  1. main: The primary interactive dashboard, settings, and health analytics window. Hides to system tray on close.
+  2. pill: A floating micro-pill widget (176x42 px, frameless, transparent). It MUST be styled via Win32 WS_EX_TOOLWINDOW to prevent appearing as an active task in Alt+Tab and taskbar switchers.
+  3. reak_overlay: The guided stretch routine window (720x520 px, centered, always-on-top).
+- Never spawn ad-hoc webview windows from the frontend; use explicit IPC commands (set_pill_mode, start_break, skip_break, inish_break) handled by WindowManager.
 
-## 3. Standalone Asset Resolution & Binary Portability
-- All visual assets (`exercises_bg.png`, `o2om.ico`) MUST be bundled via `O2omResources` using `FileInstall` directives and extracted dynamically to `%APPDATA%\O2om\assets\` when running standalone on clean machines.
-- All file paths and registry keys for Windows Autostart MUST be safely quoted (`'"' A_ScriptFullPath '"'`).
+## 3. Tiling Window Manager (TWM) Compatibility (GlazeWM / Komorebi)
+- Users running tiling window managers must not experience window snapping conflicts or resize fighting.
+- When 	iling_wm_mode is enabled in settings:
+  - All automatic edge-snapping and tucking logic for the floating mini-pill is bypassed.
+  - Window positioning delegates cleanly to the user's manual dragging or the WM workspace rules.
 
-## 4. State Engine & Escalation Invariants
-- Physical inactivity polling (`A_TimeIdlePhysical`) MUST strictly apply to active work sessions only. Break sessions must countdown without pausing when the user steps away to stretch.
-- Unacknowledged break prompts MUST escalate through two warnings (`toast_break_stage1` at `00:00`, `toast_break_stage2` at `+escalationMin`).
-- If both warnings are ignored and the device remains in active use (`A_TimeIdlePhysical < idleThresholdMs`), the engine MUST dispatch `toast_break_stage3` and automatically restart a full work countdown (`ResetToWork()`).
+## 4. State Engine & Hardware Idle Invariants
+- The high-precision countdown state machine is managed in Rust (TimerEngine / 	okio::time::interval(100ms)) to guarantee millisecond drift compensation and zero CPU churn.
+- Hardware physical idle monitoring is queried via Win32 GetLastInputInfo.
+- Inactivity pausing strictly applies to **work sessions only**. Break sessions must countdown without pausing when the user steps away from the keyboard to perform exercises.
 
-## 5. Exercise Guidance Overlay
-- The exercise screen uses `assets/exercises_bg.png` (`o2om-exercises.png`) as a clean, text-free 16:9 illustration. Do NOT add overlaid text controls on top of the image.
-- When an exercise break finishes (`00:00`), the fullscreen exercise window MUST be completely destroyed (`breakGui.Destroy()`), and the main window MUST open in `isWaitingWork` state displaying a manual **"Start Work"** button.
+## 5. Persistence & SQLite Boundaries
+- All user preferences, daily stands, focus time, and multi-day streaks are persisted locally via SQLite (usqlite) in %APPDATA%\com.o2om.desktop\o2om.db.
+- Database operations must be encapsulated in DbRepository with transactional safety.
 
-## 6. Input Controls & Input Validation
-- `AddDropDownList` MUST include an explicit rows parameter (e.g. `r2` or `r5`) to render dropdown options properly without collapsing.
-- All user-entered numeric settings MUST pass through `SafeInt()` bounds validation before saving to INI.
+## 6. Audio & Media Asset Resolution
+- Exercise routines reference visual assets located in public/assets/exercises_bg.png and public/assets/o2om.ico.
+- Desktop audio chimes are synthesized dynamically via odio and standard system frequencies, eliminating external runtime DLL dependencies.

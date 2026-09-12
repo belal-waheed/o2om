@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-root: #0D0E15;
+  --color-bg-surface: #161822;
+  --color-bg-card: #1F2333;
+  --color-bg-card-hover: #262B3F;
+  --color-border-subtle: #2A3048;
+  --color-border-strong: #3B4363;
+
+  --color-accent-focus: #6366F1;
+  --color-accent-focus-hover: #4F46E5;
+  --color-accent-break: #10B981;
+  --color-accent-break-hover: #059669;
+  --color-accent-warn: #F59E0B;
+  --color-accent-urgent: #F43F5E;
+
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+  --color-text-hint: #64748B;
+
+  --font-sans: 'IBM Plex Sans Arabic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: transparent;
+  color: var(--color-text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+/* Tabular numbers for countdown to prevent jitter */
+.tabular-timer {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-root);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-focus);
+}

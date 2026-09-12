@@ -1,27 +1,35 @@
-# O2om (قُوم) — Stand-Up Break Timer & Ergonomic Posture Coach for Windows
+# O2om (قُوم) — Stand-Up & Focus Ergonomic Health Companion for Windows
 
-> O2om (derived from Arabic "قُوم", meaning "Stand up!") is an open-source, high-craft desktop health and posture utility for Windows built with AutoHotkey v2. It features multi-mode ergonomics (Stand-Up, Eye Guard 20-20-20, Pomodoro), step-by-step guided stretch routines, daily health analytics, a floating mini-pill widget, physical idle absence detection, and native Arabic (RTL) & English localization.
+> **O2om** (derived from the Arabic imperative **قُوم**, meaning * Stand up!*) is an open-source, high-performance desktop focus and posture companion for Windows built with **Tauri v2** (Rust backend + React 19 / Vite / Tailwind CSS v4 frontend). It features multi-mode interval pacing (Pomodoro, Balanced Stand-Up, Eye Guard 20-20-20), step-by-step guided stretch routines, a floating edge-dockable mini-pill widget, zero-polling physical idle detection, and native Arabic (RTL) & English localization.
 
 ## Key Technical Specifications
-- Project Name: O2om (قُوم)
-- Version: v3.0.0
-- Target Platform: Windows 10 / Windows 11 (64-bit)
-- Language & Runtime: AutoHotkey v2.0+ (Strict v2 syntax)
-- Architecture: Layered Clean Architecture (`src/Core/`, `src/Services/`, `src/Ui/`, `src/Locale/`)
-- Localization: Native Arabic (Right-to-Left layout via WS_EX_LAYOUTRTL +E0x400000) & English (LTR)
-- Visual Theme: Modern Obsidian Dark Palette with Windows DWM Immersive Dark Titlebar
-- Memory Footprint: < 15MB RAM
-- License: Open Source
+- **Project Name**: O2om (قُوم)
+- **Version**: v4.0.0
+- **Target Platform**: Windows 10 / Windows 11 (64-bit)
+- **Architecture**: Tauri v2 Multi-Window Topology (main, pill, reak_overlay)
+- **Backend Runtime**: Rust 2021 (High-precision Async Engine, SQLite via usqlite, Win32 API, odio audio)
+- **Frontend Stack**: React 19, TypeScript, Vite, Tailwind CSS v4, Zustand, Lucide React
+- **Localization**: Native Arabic (RTL) & English (LTR) via i18next
+- **Window Management**: GlazeWM & Komorebi tiling window manager compatibility
+- **Memory Footprint**: ~30MB RAM (<5% CPU during active animations, 0% idle)
+- **License**: MIT Open Source License
 
-## Core Features
-1. Multi-Mode Ergonomic Engine: Stand-Up & Posture mode (40m/5m), 20-20-20 Eye Strain Guard (20m/20s), Deep Work Pomodoro (25m/5m), and Custom intervals.
-2. Interactive Guided Break Overlay: Step-by-step stretch coach with per-exercise countdown timers, audio cues, and clean 16:9 posture illustrations.
-3. Daily Health Analytics & Streaks: Tracks completed stands against daily goals, total focus time, and multi-day streaks in `o2om_stats.ini`.
-4. Floating Mini-Pill Widget: Draggable, always-on-top 160x46px micro-widget for distraction-free countdown monitoring.
-5. Physical Idle Absence Detection: Auto-pauses work countdown via `A_TimeIdlePhysical` when user steps away, without interrupting break countdowns.
-6. Zero-Flicker DWM Dark GUI: Utilizes `WS_CLIPCHILDREN` (+0x02000000) and `DwmSetWindowAttribute` for native Windows 10/11 dark title bars.
+## Core Capabilities
+1. **Multi-Mode Ergonomic Engine**:
+   - Deep Work Pomodoro (25m work / 5m short break / 15m long break after 4 cycles).
+   - Balanced Stand-Up (40m work / 5m break).
+   - 20-20-20 Eye Strain Guard (20m work / 20s rest).
+   - Custom user-defined intervals.
+2. **Interactive Guided Break Overlay**:
+   - 5-step guided mobility routine with individual exercise timers and chimes.
+3. **Floating Edge-Dockable Mini-Pill**:
+   - Frameless, transparent widget with Win32 WS_EX_TOOLWINDOW isolation, auto-snapping, and cursor tucking.
+4. **Physical Inactivity Detection**:
+   - Hardware idle detection via Win32 GetLastInputInfo that pauses work sessions without halting stretch routines.
+5. **SQLite Persistence**:
+   - Stores daily goals, completed stands, focus time, and multi-day streaks in local SQLite database.
 
-## Installation & Links
-- Download Executable: https://github.com/BelalWaheed/o2om/releases/latest/download/O2om.exe
-- Repository: https://github.com/BelalWaheed/o2om
-- License: Open Source
+## Distribution & Setup
+- **Standalone Executable**: o2om.exe
+- **Windows Setup Installer**: dist-setup/o2om-setup.exe (NSIS)
+- **Repository**: https://github.com/BelalWaheed/o2om

@@ -1,4 +1,21 @@
+# Rust & Tauri
 /target
-o2om_config.ini
-tests/test_results.txt
+/src-tauri/target
+*.db
+*.db-journal
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Distributables & Setup
+dist-setup/
+
+# Temporary & Logs
 error_log.txt
+
+# Standalone Release Executables
+o2om.exe
+O2om.exe
