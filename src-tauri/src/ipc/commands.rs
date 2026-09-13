@@ -10,6 +10,8 @@ use crate::ui::windows::WindowManager;
 pub struct AppState {
     pub engine: TimerEngine,
     pub db: DbRepository,
+    pub health_summary_cache: HealthStatsSummary,
+    pub current_date_str: String,
 }
 
 pub type SharedState = Arc<Mutex<AppState>>;
@@ -108,8 +110,14 @@ pub async fn save_settings(
         || app_state.engine.settings.short_break_min != settings.short_break_min
         || app_state.engine.settings.long_break_min != settings.long_break_min;
 
+    let goal_changed = app_state.engine.settings.daily_stand_goal != settings.daily_stand_goal;
+
     app_state.engine.settings = settings.clone();
     let _ = app_state.db.save_settings(&settings);
+
+    if goal_changed {
+        app_state.health_summary_cache = app_state.db.get_health_stats(settings.daily_stand_goal);
+    }
 
     if dur_changed {
         app_state.engine.reset_to_work();
@@ -122,7 +130,7 @@ pub async fn save_settings(
 #[tauri::command]
 pub async fn get_health_stats(state: State<'_, SharedState>) -> Result<HealthStatsSummary, String> {
     let app_state = state.lock().await;
-    Ok(app_state.db.get_health_stats(app_state.engine.settings.daily_stand_goal))
+    Ok(app_state.health_summary_cache.clone())
 }
 
 #[tauri::command]
@@ -133,8 +141,13 @@ pub async fn get_weekly_history(state: State<'_, SharedState>) -> Result<Vec<Dai
 
 #[tauri::command]
 pub async fn reset_all_stats(state: State<'_, SharedState>) -> Result<(), String> {
-    let app_state = state.lock().await;
-    app_state.db.reset_all_stats().map_err(|e| e.to_string())
+    let mut app_state = state.lock().await;
+    let res = app_state.db.reset_all_stats();
+    if res.is_ok() {
+        let goal = app_state.engine.settings.daily_stand_goal;
+        app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+    }
+    res.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

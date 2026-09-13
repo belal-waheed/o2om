@@ -50,7 +50,11 @@ pub fn run() {
 
             let auto_pill = engine.settings.auto_pill_mode;
 
-            let state: SharedState = Arc::new(Mutex::new(AppState { engine, db }));
+            let initial_goal = engine.settings.daily_stand_goal;
+            let health_summary_cache = db.get_health_stats(initial_goal);
+            let current_date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+            let state: SharedState = Arc::new(Mutex::new(AppState { engine, db, health_summary_cache, current_date_str }));
             app.manage(state.clone());
 
             let app_handle = app.handle().clone();
@@ -166,6 +170,7 @@ pub fn run() {
             let state_hover = state.clone();
             tauri::async_runtime::spawn(async move {
                 let mut hover_interval = tokio::time::interval(Duration::from_millis(80));
+                hover_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
                 loop {
                     hover_interval.tick().await;
                     let allow_tuck = {
@@ -179,12 +184,13 @@ pub fn run() {
                 }
             });
 
-            // Start 1-Second Master Background Tick Loop
+            // Start 100ms Master Background Tick Loop (High Precision)
             let state_tick = state.clone();
             let app_tick = app_handle.clone();
 
             tauri::async_runtime::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_millis(1000));
+                let mut interval = tokio::time::interval(Duration::from_millis(100));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
                 let mut tick_counter: u64 = 0;
                 loop {
                     interval.tick().await;
@@ -203,6 +209,7 @@ pub fn run() {
                     match tick_event {
                         crate::core::engine::TickEvent::WorkCompleted => {
                             let _ = app_state.db.add_focus_minutes(work_interval, goal);
+                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
                             AudioService::play_work_complete(sound);
                             let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
                             let msg = if lang == "ar" {
@@ -228,6 +235,7 @@ pub fn run() {
                                 today_stands: 0,
                                 current_streak_days: 0,
                             });
+                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
                             AudioService::play_break_complete(sound);
 
                             let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
@@ -291,8 +299,17 @@ pub fn run() {
                         crate::core::engine::TickEvent::None => {}
                     }
 
+                    // Check for midnight rollover every 60 seconds
+                    if tick_counter % 600 == 0 {
+                        let now_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+                        if now_date != app_state.current_date_str {
+                            app_state.current_date_str = now_date;
+                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+                        }
+                    }
+
                     let snapshot = app_state.engine.get_snapshot();
-                    let health_summary = app_state.db.get_health_stats(goal);
+                    let health_summary = app_state.health_summary_cache.clone();
 
                     // Update Tray Tooltip
                     let tooltip = format!(
