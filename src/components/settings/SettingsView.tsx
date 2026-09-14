@@ -70,12 +70,18 @@ export const SettingsView: React.FC = () => {
       console.warn("Autostart sync warning:", e);
     }
 
-    await saveSettings(sanitized);
-    setSavedFeedback(true);
-    setTimeout(() => {
-      setSavedFeedback(false);
-      setActiveTab("focus");
-    }, 600);
+    try {
+      await saveSettings(sanitized);
+      setSavedFeedback(true);
+      setTimeout(() => {
+        setSavedFeedback(false);
+        setActiveTab("focus");
+      }, 600);
+    } catch (e) {
+      console.error(e);
+      // Fallback alert for lock failures to notify user
+      alert("Failed to save settings: " + String(e));
+    }
   };
 
   return (

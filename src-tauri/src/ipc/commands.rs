@@ -89,7 +89,9 @@ pub async fn snooze_timer(state: State<'_, SharedState>) -> Result<TimerStateSna
 pub async fn set_mode(mode: SessionMode, state: State<'_, SharedState>) -> Result<TimerStateSnapshot, String> {
     let mut app_state = state.lock().await;
     app_state.engine.set_mode(mode);
-    let _ = app_state.db.save_settings(&app_state.engine.settings);
+    if let Err(e) = app_state.db.save_settings(&app_state.engine.settings) {
+        eprintln!("Failed to save settings: {}", e);
+    }
     let _ = app_state.db.save_active_session(&app_state.engine.to_persisted());
     Ok(app_state.engine.get_snapshot())
 }
@@ -113,7 +115,10 @@ pub async fn save_settings(
     let goal_changed = app_state.engine.settings.daily_stand_goal != settings.daily_stand_goal;
 
     app_state.engine.settings = settings.clone();
-    let _ = app_state.db.save_settings(&settings);
+    if let Err(e) = app_state.db.save_settings(&settings) {
+        eprintln!("Failed to save settings: {}", e);
+        return Err(format!("Failed to save settings to database: {}", e));
+    }
 
     if goal_changed {
         app_state.health_summary_cache = app_state.db.get_health_stats(settings.daily_stand_goal);

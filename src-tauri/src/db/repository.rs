@@ -66,7 +66,11 @@ impl DbRepository {
     }
 
     pub fn get_conn(&self) -> Result<Connection> {
-        Connection::open(&self.db_path)
+        let conn = Connection::open(&self.db_path)?;
+        conn.busy_timeout(std::time::Duration::from_millis(5000))?;
+        let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
+        Ok(conn)
     }
 
     pub fn init_tables(&self) -> Result<()> {

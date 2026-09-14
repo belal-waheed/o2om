@@ -192,6 +192,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap, settings: newSettings });
     } catch (e) {
       console.error(e);
+      throw e;
     }
   },
 
