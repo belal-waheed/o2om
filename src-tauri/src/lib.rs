@@ -29,7 +29,6 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
         ))
-        .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             // Initialize startup tick for idle monitor (prevents immediate boot freeze)
             IdleMonitor::init();
@@ -48,6 +47,7 @@ pub fn run() {
                 }
             }
 
+            let is_minimized = std::env::args().any(|arg| arg == "--minimized");
             let auto_pill = engine.settings.auto_pill_mode;
 
             let initial_goal = engine.settings.daily_stand_goal;
@@ -59,13 +59,30 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
 
-            if auto_pill {
+            if is_minimized {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.hide();
+                }
+                if auto_pill {
+                    let app_init = app_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        WindowManager::set_pill_mode(&app_init, true);
+                        let _ = app_init.emit("pill-mode-changed", true);
+                    });
+                }
+            } else if auto_pill {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.hide();
+                }
                 let app_init = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(50)).await;
                     WindowManager::set_pill_mode(&app_init, true);
                     let _ = app_init.emit("pill-mode-changed", true);
                 });
+            } else {
+                WindowManager::show_main(&app_handle);
             }
 
             // Intercept window events:

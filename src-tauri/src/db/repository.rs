@@ -3,6 +3,7 @@ use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use crate::core::engine::{EngineSettings, SessionMode};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,8 +44,10 @@ pub struct PersistedSession {
     pub last_saved_epoch: i64,
 }
 
+#[derive(Clone)]
 pub struct DbRepository {
-    db_path: PathBuf,
+    pub conn: Arc<Mutex<Connection>>,
+    pub db_path: PathBuf,
 }
 
 impl DbRepository {
@@ -60,22 +63,36 @@ impl DbRepository {
             let _ = fs::copy(&old_db, &db_path);
         }
 
-        let repo = Self { db_path };
-        let _ = repo.init_tables();
-        repo
-    }
-
-    pub fn get_conn(&self) -> Result<Connection> {
-        let conn = Connection::open(&self.db_path)?;
-        conn.busy_timeout(std::time::Duration::from_millis(5000))?;
+        let conn = Connection::open(&db_path).unwrap_or_else(|_| {
+            Connection::open_in_memory().expect("Failed to initialize SQLite fallback")
+        });
+        let _ = conn.busy_timeout(std::time::Duration::from_millis(5000));
         let _ = conn.pragma_update(None, "journal_mode", "WAL");
         let _ = conn.pragma_update(None, "synchronous", "NORMAL");
-        Ok(conn)
+
+        let _ = Self::init_tables(&conn);
+
+        Self {
+            conn: Arc::new(Mutex::new(conn)),
+            db_path,
+        }
     }
 
-    pub fn init_tables(&self) -> Result<()> {
-        let conn = self.get_conn()?;
+    pub fn for_test(db_path: PathBuf) -> Self {
+        let conn = Connection::open(&db_path).expect("Failed to open test database");
+        let _ = conn.busy_timeout(std::time::Duration::from_millis(5000));
+        let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
 
+        let _ = Self::init_tables(&conn);
+
+        Self {
+            conn: Arc::new(Mutex::new(conn)),
+            db_path,
+        }
+    }
+
+    pub fn init_tables(conn: &Connection) -> Result<()> {
         conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS settings (
@@ -127,12 +144,14 @@ impl DbRepository {
         Ok(())
     }
 
+    pub fn init_repo_tables(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        Self::init_tables(&conn)
+    }
+
     pub fn load_settings(&self) -> EngineSettings {
         let mut settings = EngineSettings::default();
-        let conn = match self.get_conn() {
-            Ok(c) => c,
-            Err(_) => return settings,
-        };
+        let conn = self.conn.lock().unwrap();
 
         let mut stmt = match conn.prepare("SELECT key, value FROM settings") {
             Ok(s) => s,
@@ -222,7 +241,7 @@ impl DbRepository {
     }
 
     pub fn save_settings(&self, settings: &EngineSettings) -> Result<()> {
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
 
         let mode_str = match settings.mode {
             SessionMode::Pomodoro => "pomodoro",
@@ -261,8 +280,7 @@ impl DbRepository {
         Ok(())
     }
 
-    pub fn check_midnight_rollover(&self, goal: u32) -> Result<()> {
-        let conn = self.get_conn()?;
+    fn internal_check_midnight_rollover(conn: &Connection, goal: u32) -> Result<()> {
         let today = Local::now().format("%Y-%m-%d").to_string();
 
         let mut stmt = conn.prepare("SELECT current_streak_days, best_streak_days, last_active_date FROM streaks_metadata WHERE id = 1")?;
@@ -292,9 +310,14 @@ impl DbRepository {
         Ok(())
     }
 
+    pub fn check_midnight_rollover(&self, goal: u32) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        Self::internal_check_midnight_rollover(&conn, goal)
+    }
+
     pub fn record_completed_break(&self, goal: u32) -> Result<BreakRecordResult> {
-        let _ = self.check_midnight_rollover(goal);
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
+        let _ = Self::internal_check_midnight_rollover(&conn, goal);
         let today = Local::now().format("%Y-%m-%d").to_string();
 
         conn.execute(
@@ -351,8 +374,8 @@ impl DbRepository {
         if minutes == 0 {
             return Ok(());
         }
-        let _ = self.check_midnight_rollover(goal);
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
+        let _ = Self::internal_check_midnight_rollover(&conn, goal);
         let today = Local::now().format("%Y-%m-%d").to_string();
 
         conn.execute(
@@ -366,19 +389,8 @@ impl DbRepository {
     }
 
     pub fn get_health_stats(&self, goal: u32) -> HealthStatsSummary {
-        let _ = self.check_midnight_rollover(goal);
-        let conn = match self.get_conn() {
-            Ok(c) => c,
-            Err(_) => return HealthStatsSummary {
-                today_stands: 0,
-                daily_stand_goal: goal,
-                today_focus_minutes: 0,
-                total_stands_all_time: 0,
-                total_focus_minutes_all_time: 0,
-                current_streak_days: 0,
-                best_streak_days: 0,
-            },
-        };
+        let conn = self.conn.lock().unwrap();
+        let _ = Self::internal_check_midnight_rollover(&conn, goal);
 
         let today = Local::now().format("%Y-%m-%d").to_string();
 
@@ -413,10 +425,7 @@ impl DbRepository {
 
     pub fn get_weekly_history(&self) -> Vec<DailyHealthRecord> {
         let mut records = Vec::new();
-        let conn = match self.get_conn() {
-            Ok(c) => c,
-            Err(_) => return records,
-        };
+        let conn = self.conn.lock().unwrap();
 
         let mut stmt = match conn.prepare(
             "SELECT date, stands_count, stand_goal, focus_minutes, goal_met 
@@ -447,7 +456,7 @@ impl DbRepository {
     }
 
     pub fn save_active_session(&self, session: &PersistedSession) -> Result<()> {
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
         conn.execute(
             "INSERT INTO active_session (id, status, remaining_ms, session_total_ms, completed_cycles, is_paused, is_guided_exercise, last_saved_epoch)
              VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -473,7 +482,7 @@ impl DbRepository {
     }
 
     pub fn load_active_session(&self) -> Result<Option<PersistedSession>> {
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
         let mut stmt = match conn.prepare(
             "SELECT status, remaining_ms, session_total_ms, completed_cycles, is_paused, is_guided_exercise, last_saved_epoch
              FROM active_session WHERE id = 1",
@@ -502,13 +511,13 @@ impl DbRepository {
     }
 
     pub fn clear_active_session(&self) -> Result<()> {
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM active_session WHERE id = 1", [])?;
         Ok(())
     }
 
     pub fn reset_all_stats(&self) -> Result<()> {
-        let conn = self.get_conn()?;
+        let conn = self.conn.lock().unwrap();
         conn.execute_batch(
             "
             DELETE FROM daily_health_records;
@@ -531,8 +540,8 @@ mod tests {
         let test_db = temp_dir.join("test_settings.db");
         let _ = fs::remove_file(&test_db);
 
-        let repo = DbRepository { db_path: test_db.clone() };
-        assert!(repo.init_tables().is_ok());
+        let repo = DbRepository::for_test(test_db.clone());
+        assert!(repo.init_repo_tables().is_ok());
 
         let mut settings = EngineSettings::default();
         settings.work_interval_min = 50;
@@ -556,8 +565,8 @@ mod tests {
         let test_db = temp_dir.join("test_streaks.db");
         let _ = fs::remove_file(&test_db);
 
-        let repo = DbRepository { db_path: test_db.clone() };
-        assert!(repo.init_tables().is_ok());
+        let repo = DbRepository::for_test(test_db.clone());
+        assert!(repo.init_repo_tables().is_ok());
 
         // Record 1st break towards goal of 3
         let res1 = repo.record_completed_break(3).unwrap();
@@ -603,8 +612,8 @@ mod tests {
         let test_db = temp_dir.join("test_session.db");
         let _ = fs::remove_file(&test_db);
 
-        let repo = DbRepository { db_path: test_db.clone() };
-        assert!(repo.init_tables().is_ok());
+        let repo = DbRepository::for_test(test_db.clone());
+        assert!(repo.init_repo_tables().is_ok());
 
         // Initially no active session
         let none_session = repo.load_active_session().unwrap();
@@ -655,8 +664,8 @@ mod tests {
 
         // Create a dummy legacy db with specific settings
         {
-            let repo = DbRepository { db_path: legacy_db.clone() };
-            assert!(repo.init_tables().is_ok());
+            let repo = DbRepository::for_test(legacy_db.clone());
+            assert!(repo.init_repo_tables().is_ok());
             let mut s = EngineSettings::default();
             s.work_interval_min = 42;
             assert!(repo.save_settings(&s).is_ok());
@@ -672,7 +681,7 @@ mod tests {
             fs::copy(&legacy_db, &new_db).unwrap();
         }
 
-        let new_repo = DbRepository { db_path: new_db.clone() };
+        let new_repo = DbRepository::for_test(new_db.clone());
         let loaded = new_repo.load_settings();
         assert_eq!(loaded.work_interval_min, 42);
 

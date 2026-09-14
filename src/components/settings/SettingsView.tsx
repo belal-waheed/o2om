@@ -11,6 +11,7 @@ import {
   Layout,
   Magnet,
   Minimize2,
+  AlertCircle,
 } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
@@ -41,6 +42,7 @@ export const SettingsView: React.FC = () => {
   });
 
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -48,7 +50,14 @@ export const SettingsView: React.FC = () => {
     }
   }, [settings]);
 
+  const updateField = <K extends keyof EngineSettings>(key: K, value: EngineSettings[K]) => {
+    setErrorMessage(null);
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleSave = async () => {
+    setErrorMessage(null);
+
     // Clamping & Bounds Validation
     const sanitized: EngineSettings = {
       ...formData,
@@ -72,6 +81,7 @@ export const SettingsView: React.FC = () => {
 
     try {
       await saveSettings(sanitized);
+      setErrorMessage(null);
       setSavedFeedback(true);
       setTimeout(() => {
         setSavedFeedback(false);
@@ -79,8 +89,7 @@ export const SettingsView: React.FC = () => {
       }, 600);
     } catch (e) {
       console.error(e);
-      // Fallback alert for lock failures to notify user
-      alert("Failed to save settings: " + String(e));
+      setErrorMessage(String(e));
     }
   };
 
@@ -94,7 +103,7 @@ export const SettingsView: React.FC = () => {
         </div>
         <select
           value={formData.language}
-          onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+          onChange={(e) => updateField("language", e.target.value)}
           className="bg-[#1F2333] text-xs text-[#F1F5F9] font-medium py-1.5 px-3 rounded-lg border border-[#2A3048] focus:border-[#6366F1] outline-none cursor-pointer"
         >
           <option value="ar">العربية</option>
@@ -119,7 +128,7 @@ export const SettingsView: React.FC = () => {
               min={1}
               max={180}
               value={formData.work_interval_min}
-              onChange={(e) => setFormData({ ...formData, work_interval_min: parseInt(e.target.value) || 1 })}
+              onChange={(e) => updateField("work_interval_min", parseInt(e.target.value) || 1)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -133,7 +142,7 @@ export const SettingsView: React.FC = () => {
               min={1}
               max={60}
               value={formData.short_break_min}
-              onChange={(e) => setFormData({ ...formData, short_break_min: parseInt(e.target.value) || 1 })}
+              onChange={(e) => updateField("short_break_min", parseInt(e.target.value) || 1)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -147,7 +156,7 @@ export const SettingsView: React.FC = () => {
               min={1}
               max={90}
               value={formData.long_break_min}
-              onChange={(e) => setFormData({ ...formData, long_break_min: parseInt(e.target.value) || 1 })}
+              onChange={(e) => updateField("long_break_min", parseInt(e.target.value) || 1)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -161,7 +170,7 @@ export const SettingsView: React.FC = () => {
               min={1}
               max={12}
               value={formData.cycles_before_long}
-              onChange={(e) => setFormData({ ...formData, cycles_before_long: parseInt(e.target.value) || 1 })}
+              onChange={(e) => updateField("cycles_before_long", parseInt(e.target.value) || 1)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -179,7 +188,7 @@ export const SettingsView: React.FC = () => {
           min={1}
           max={24}
           value={formData.daily_stand_goal}
-          onChange={(e) => setFormData({ ...formData, daily_stand_goal: parseInt(e.target.value) || 8 })}
+          onChange={(e) => updateField("daily_stand_goal", parseInt(e.target.value) || 8)}
           className="w-16 bg-[#1F2333] border border-[#2A3048] rounded-lg py-1 px-2 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
         />
       </div>
@@ -199,7 +208,7 @@ export const SettingsView: React.FC = () => {
           <input
             type="checkbox"
             checked={formData.sound_enabled}
-            onChange={(e) => setFormData({ ...formData, sound_enabled: e.target.checked })}
+            onChange={(e) => updateField("sound_enabled", e.target.checked)}
             className="w-4 h-4 accent-[#6366F1] rounded cursor-pointer"
           />
         </label>
@@ -212,7 +221,7 @@ export const SettingsView: React.FC = () => {
           <input
             type="checkbox"
             checked={formData.start_with_windows}
-            onChange={(e) => setFormData({ ...formData, start_with_windows: e.target.checked })}
+            onChange={(e) => updateField("start_with_windows", e.target.checked)}
             className="w-4 h-4 accent-[#6366F1] rounded cursor-pointer"
           />
         </label>
@@ -230,7 +239,7 @@ export const SettingsView: React.FC = () => {
           <input
             type="checkbox"
             checked={formData.auto_pill_mode}
-            onChange={(e) => setFormData({ ...formData, auto_pill_mode: e.target.checked })}
+            onChange={(e) => updateField("auto_pill_mode", e.target.checked)}
             className="w-4 h-4 accent-[#6366F1] rounded cursor-pointer"
           />
         </label>
@@ -249,7 +258,7 @@ export const SettingsView: React.FC = () => {
             <input
               type="checkbox"
               checked={formData.tiling_wm_mode}
-              onChange={(e) => setFormData({ ...formData, tiling_wm_mode: e.target.checked })}
+              onChange={(e) => updateField("tiling_wm_mode", e.target.checked)}
               className="w-4 h-4 accent-[#6366F1] rounded cursor-pointer mt-0.5 flex-shrink-0"
             />
           </label>
@@ -268,12 +277,20 @@ export const SettingsView: React.FC = () => {
               type="checkbox"
               disabled={formData.tiling_wm_mode}
               checked={!formData.tiling_wm_mode && formData.pill_dock_snapping}
-              onChange={(e) => setFormData({ ...formData, pill_dock_snapping: e.target.checked })}
+              onChange={(e) => updateField("pill_dock_snapping", e.target.checked)}
               className="w-4 h-4 accent-[#6366F1] rounded cursor-pointer mt-0.5 flex-shrink-0 disabled:opacity-40"
             />
           </label>
         </div>
       </div>
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-xl flex items-center gap-2.5 text-xs text-red-200">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <span className="leading-snug">{errorMessage}</span>
+        </div>
+      )}
 
       {/* 5. Save Button */}
       <button
