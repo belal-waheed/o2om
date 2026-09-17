@@ -57,7 +57,6 @@ impl WindowManager {
     }
 
     /// Configures native Windows extended styles (WS_EX_TOOLWINDOW) for the pill window
-    /// Configures native Windows extended styles (WS_EX_TOOLWINDOW) for the pill window
     /// while clearing WS_EX_APPWINDOW and parenting to main window so Windows taskbar never shows it.
     pub fn apply_toolwindow_style(app: &AppHandle, label: &str) {
         #[cfg(windows)]

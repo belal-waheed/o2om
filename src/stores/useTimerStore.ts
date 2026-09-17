@@ -22,7 +22,7 @@ interface TimerStoreState {
   setPillMode: (isPill: boolean) => Promise<void>;
   togglePillMode: () => Promise<void>;
   setPillTucked: (tucked: boolean) => Promise<void>;
-  initStore: () => Promise<void>;
+  initStore: (windowLabel?: "main" | "pill" | "break_overlay") => Promise<void>;
   startWork: () => Promise<void>;
   startBreak: (guided: boolean) => Promise<void>;
   skipBreak: () => Promise<void>;
@@ -70,10 +70,35 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
     await get().setPillMode(next);
   },
 
-  initStore: async () => {
+  initStore: async (windowLabel: "main" | "pill" | "break_overlay" = "main") => {
     if (get().isInitialized) return;
 
     try {
+      if (windowLabel !== "main") {
+        const initialState = await tauriApi.getState();
+        set({
+          snapshot: initialState,
+          isInitialized: true,
+        });
+
+        await tauriApi.onTick((payload) => {
+          set({
+            snapshot: payload.snapshot,
+            healthSummary: payload.health_summary,
+          });
+        });
+
+        if (windowLabel === "pill") {
+          await tauriApi.onPillDockChanged((dock) => {
+            set({ dockInfo: dock });
+          });
+          await tauriApi.onPillModeChanged((isPill) => {
+            set({ isPillMode: isPill, dockInfo: isPill ? get().dockInfo : null });
+          });
+        }
+        return;
+      }
+
       const [initialState, initialSettings, initialStats] = await Promise.all([
         tauriApi.getState(),
         tauriApi.getSettings(),

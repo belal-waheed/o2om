@@ -1,6 +1,6 @@
 # O2om (قُوم) — Workflows & Runtime State Sequences
 
-This document outlines the state machine transitions, background tick lifecycle, break decision branches, escalation warnings, and auto-reset workflows for **O2om**.
+This document outlines the state machine transitions, background tick lifecycle, break decision branches, quiet waiting states, and multi-window orchestration for **O2om** (Tauri v2 + Rust Core + React 19).
 
 ---
 
@@ -13,104 +13,111 @@ flowchart TD
     %% Work state actions
     Work -->|Click Pause| Paused[Paused State]
     Paused -->|Click Resume| Work
-    Work -->|Physical Inactivity > IdleThreshold| Idle[Idle State - Auto Paused]
+    Work -->|Physical Inactivity >= IdleThreshold| Idle[Idle State - Countdown Suspended]
     Idle -->|Physical Input Detected| Work
 
-    %% Break trigger
-    Work -->|Countdown Reaches 00:00| BreakPrompt{Break Prompt State}
+    %% Work session completion
+    Work -->|Countdown Reaches 00:00| WaitingBreak[WaitingBreak State - Paused Silently at 00:00]
+    WaitingBreak -->|Play Bell Once & Show Toast Once| WaitingBreak
 
-    %% Break branches
-    BreakPrompt -->|Click Snooze| SnoozeDelay[Snooze Countdown]
-    SnoozeDelay -->|Snooze Hits 00:00| BreakPrompt
+    %% User decisions from WaitingBreak
+    WaitingBreak -->|Click Snooze| SnoozeWork[Snooze 5m Session]
+    SnoozeWork -->|Countdown Reaches 00:00| WaitingBreak
 
-    BreakPrompt -->|Ignored 1st Warning Interval| Warning1[Toast Warning 1: Break Time Passed]
-    Warning1 --> BreakPrompt
-
-    BreakPrompt -->|Ignored 2nd Warning & Device in Use| AutoReset[Toast Final: Auto-Reset Work Timer]
-    AutoReset --> Work
-
-    BreakPrompt -->|Click Start Break| TrayBreak[Break Active - Tray Only]
-    BreakPrompt -->|Click Start Exercises| ExerciseBreak[Break Active - 16:9 Fullscreen Guide]
+    WaitingBreak -->|Click Start Break| BreakQuiet[OnBreak - Quiet Break Session]
+    WaitingBreak -->|Click Start Exercises| BreakGuided[OnBreak - Guided Exercise Overlay]
 
     %% Break completion
-    TrayBreak -->|Break Countdown Hits 00:00| WaitingWork[Waiting Work State]
-    ExerciseBreak -->|Break Countdown Hits 00:00 / ESC / Start Work| WaitingWork
+    BreakQuiet -->|Break Reaches 00:00| WaitingWork[WaitingWork State]
+    BreakGuided -->|Break Reaches 00:00 or Dismissed| WaitingWork
 
-    %% Returning to work
-    WaitingWork -->|Click 'Start Work' Button| Work
+    WaitingWork -->|Play Rising Chime Once & Show Toast Once| WaitingWork
+    WaitingWork -->|Click Start Work| Work
 ```
 
 ---
 
-## 2. 1-Second Timer Tick Sequence Diagram
+## 2. 100ms Master Background Tick Sequence Diagram
 
-The central `SetTimer(ObjBindMethod(this, "Tick"), 1000)` loop evaluates hardware inputs, delta time, and state transitions every 1,000 milliseconds:
+The background engine runs a high-precision `tokio::time::interval(100ms)` loop in Rust to track physical hardware idle and delta milliseconds with zero layout jitter:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant System as Windows System Timer
-    participant App as O2omApp (Controller)
-    participant Engine as O2omEngine (State Machine)
-    participant Hardware as Input Hardware (A_TimeIdlePhysical)
-    participant GUI as Dashboard & Break GUI
-    participant Toast as Windows Notification Center
+    participant Tokio as Tokio Interval (100ms)
+    participant State as SharedState Mutex (AppState)
+    participant IdleMon as IdleMonitor (Win32 GetLastInputInfo)
+    participant Engine as TimerEngine (State Machine)
+    participant Audio as AudioService (Rodio Bell / Chime)
+    participant Windows as WindowManager (Multi-Window)
+    participant Webview as Webview Windows (Main / Pill / Break)
 
-    System->>App: Tick() [Every 1000ms]
-    App->>Engine: Tick()
-    Engine->>Hardware: Read A_TimeIdlePhysical
-    Hardware-->>Engine: Idle milliseconds
+    Tokio->>State: Acquire Lock
+    State->>IdleMon: Get physical idle milliseconds
+    IdleMon-->>State: idle_ms
+    State->>Engine: tick(idle_ms)
 
-    alt System Sleep / Hibernate (delta > 5000ms)
-        Engine-->>App: { type: "normal" }
-    else User Inactive (idle >= idleThresholdMs)
-        Engine-->>App: { type: "idle" }
-    else Countdown Reaches 00:00 (Work ended)
-        Engine-->>App: { type: "waiting_break" }
-        App->>GUI: Switch to Dashboard & Display Break Buttons
-        App->>Toast: Dispatch Initial "Break Time" Notification
-    else Ignored Warning 1 (delta >= escalationMs, stage 1)
-        Engine-->>App: { type: "escalation", stage: 1 }
-        App->>Toast: Dispatch Warning 1 Toast
-    else Ignored Warning 2 & Device in Use (stage >= 2, idle < idleThresholdMs)
-        Engine-->>App: { type: "auto_work_reset", stage: 2 }
-        App->>Toast: Dispatch "Final Warning: Auto-Reset" Notification
-        App->>GUI: Reset Dashboard to Normal Work Mode
-    else Break Reaches 00:00 (Break ended)
-        Engine-->>App: { type: "break_ended" }
-        App->>GUI: Destroy breakGui & Show "Start Work" Button
-        App->>Toast: Dispatch "Break Ended" Notification
+    alt Physical Inactivity during Work (idle_ms >= threshold)
+        Engine-->>State: is_idle = true, returns TickEvent::None
+    else Countdown Reaches 00:00 (Work session finished)
+        Engine-->>State: status = WaitingBreak, returns TickEvent::WorkCompleted
+        State->>Audio: play_work_complete (528 Hz bell, played once)
+        State->>Windows: restore_to_main()
+        State->>Webview: emit("timer-work-completed", payload)
+    else In WaitingBreak State (post-session pause)
+        Note over Engine: Silently stays at 00:00 awaiting user action.<br/>Zero escalation chimes, zero auto-resets.
+        Engine-->>State: returns TickEvent::None
+    else Break Reaches 00:00 (Break finished)
+        Engine-->>State: status = WaitingWork, returns TickEvent::BreakCompleted
+        State->>Audio: play_break_complete (660 Hz / 880 Hz rising chime)
+        State->>Windows: hide_break_overlay(), restore_to_main()
+        State->>Webview: emit("timer-break-completed", payload)
     else Standard Countdown
-        Engine-->>App: { type: "normal" }
+        Engine-->>State: returns TickEvent::None
     end
 
-    App->>GUI: UpdateDisplay() [Refresh time string & status]
+    State->>Webview: emit("timer-tick", TimerTickPayload)
 ```
 
 ---
 
 ## 3. Detailed Workflow Descriptions
 
-### A. Active Work Session & Idle Recovery
-1. When launched, `O2omEngine` starts in a working session with `remaining = workIntervalMin * 60 * 1000`.
-2. Every tick, delta time is deducted from `remaining`.
-3. If the user stops interacting with mouse and keyboard, `A_TimeIdlePhysical` begins incrementing.
-4. Once `idle >= idleThresholdMs`, the engine enters `isIdle` mode, suspending countdown deduction.
-5. As soon as the user returns (hardware input detected, `idle < idleThresholdMs`), the engine resets to a fresh work interval.
+### A. Active Work Session & Physical Idle Detection
+1. Upon startup, `TimerEngine` initializes in `TimerStatus::Work` with `remaining_ms = work_interval_min * 60 * 1000`.
+2. Every 100ms tick, elapsed time is deducted using millisecond delta calculation from monotonic `Instant`.
+3. Physical hardware activity is queried directly via Win32 `GetLastInputInfo`.
+4. If `idle_ms >= idle_threshold_ms`, the countdown is suspended (`is_idle = true`) without resetting elapsed time.
+5. Inactivity pausing strictly applies to work sessions. Break sessions continue counting down even if the user steps away from keyboard and mouse.
 
-### B. Break Trigger & Escalation Workflow (Two Warnings + Auto-Reset)
-1. When work timer reaches `00:00`, the engine transitions into `isWaitingBreak`.
-2. The main window pops to the front, and the initial break notification is dispatched (`toast_break_stage1`).
-3. If no action is taken after `escalationMs` (e.g. 2 minutes), Warning 1 is dispatched (`toast_break_stage2`).
-4. If still ignored after a second `escalationMs` interval:
-   - If the user is actively using the computer (`idle < idleThresholdMs`), the final notification (`toast_break_stage3`) is dispatched and the engine **automatically starts a new work countdown**.
-   - If the user stepped away from the desk (`idle >= idleThresholdMs`), the engine transitions cleanly to idle mode.
+### B. Quiet Post-Work Behavior (WaitingBreak State)
+1. When work timer reaches `00:00`:
+   - `TickEvent::WorkCompleted` is returned exactly once.
+   - A single completion bell (528 Hz + 1056 Hz warm tone) plays once.
+   - A single desktop toast notification is shown.
+   - Mini-Pill automatically restores to the full main dashboard.
+   - `TimerEngine` transitions into `TimerStatus::WaitingBreak`.
+2. The timer remains paused silently at `00:00`.
+3. No recurring reminder chimes, no escalation toasts, and no auto-resets occur. The application waits patiently until the user explicitly selects an action:
+   - **Start Exercises**: Opens the 16:9 guided stretch overlay window.
+   - **Quiet Break**: Enters quiet break countdown on the main dashboard.
+   - **Snooze 5 Minutes**: Temporarily adds 5 minutes of work time.
+   - **Start Work**: Resets to a fresh work countdown immediately.
 
-### C. Post-Break Workflow (Clean Resumption)
-1. When the break countdown expires (`00:00`), the fullscreen exercise overlay is completely destroyed (`breakGui.Destroy()`).
-2. The engine transitions into `isWaitingWork` state and resets `remaining = workIntervalMin * 60 * 1000`.
-3. The main dashboard appears with a prominent **"Start Work"** button.
-4. The timer does **not** count down until the user explicitly clicks **"Start Work"**, ensuring the user is truly seated and ready.
+### C. Guided Break & Stretch Overlay Routine
+1. When the user selects **Start Exercises**:
+   - `WindowManager::show_break_overlay()` presents the 720x520 always-on-top window.
+   - Dynamic exercise routines are generated based on break length (neck, shoulder, wrist, spine, and stand stretches).
+   - Audio step chimes (880 Hz + 1320 Hz) sound between exercise intervals.
+2. If closed early via the close button or keyboard, the window gracefully hides and returns focus to the main window.
+
+### D. Post-Break Resumption (WaitingWork State)
+1. When break countdown concludes (`00:00`):
+   - `TickEvent::BreakCompleted` is returned once.
+   - A single rising harmonic chime (660 Hz + 880 Hz) plays once.
+   - If daily stand goal is achieved, celebration feedback is recorded in SQLite.
+   - The break overlay closes, and main dashboard displays the prominent **Start Work** button.
+2. The countdown does not start automatically; it waits for the user to click **Start Work**.
 
 ---
 
@@ -119,19 +126,17 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant User as User
-    participant View as O2omSettingsView
-    participant App as O2omApp
-    participant Settings as O2omSettings
-    participant Lang as O2omLang
-    participant INI as o2om_config.ini
+    participant User as User (React UI)
+    participant Store as useTimerStore (Zustand)
+    participant IPC as Tauri IPC (save_settings)
+    participant DB as SQLite (DbRepository)
+    participant Engine as TimerEngine
 
-    User->>View: Edit Values & Language -> Click "Save Settings"
-    View->>App: ApplySettingsFromGui()
-    App->>Settings: Update values in memory
-    App->>Lang: Update currentLang ("ar" | "en")
-    App->>Settings: Save()
-    Settings->>INI: IniWrite key-value pairs
-    App->>App: SetupGui() [Re-create GUI with RTL / LTR flags]
-    App->>App: ShowGui()
+    User->>Store: Edit durations, goals, or language -> click Save
+    Store->>IPC: tauriApi.saveSettings(sanitizedSettings)
+    IPC->>DB: save_settings(settings)
+    IPC->>Engine: update engine settings in memory
+    DB-->>IPC: success
+    IPC-->>Store: updated TimerStateSnapshot
+    Store->>User: Update UI language and switch active tab to focus
 ```

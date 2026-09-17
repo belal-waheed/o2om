@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { Timer, BarChart3, Settings } from "lucide-react";
 import { useTimerStore } from "../stores/useTimerStore";
+import { cn } from "../lib/utils";
 import { ModeSelector } from "../components/dashboard/ModeSelector";
 import { TabularTimer } from "../components/dashboard/TabularTimer";
 import { ProgressBar } from "../components/dashboard/ProgressBar";
@@ -12,11 +13,7 @@ import { SettingsView } from "../components/settings/SettingsView";
 
 export const MainWindow: React.FC = () => {
   const { t } = useTranslation();
-  const { activeTab, setActiveTab, initStore } = useTimerStore();
-
-  useEffect(() => {
-    initStore();
-  }, [initStore]);
+  const { activeTab, setActiveTab } = useTimerStore();
 
   // Main Dashboard View
   return (
@@ -32,11 +29,12 @@ export const MainWindow: React.FC = () => {
         <div className="flex items-center gap-1 bg-[#161822] p-0.5 rounded-xl border border-[#2A3048]">
           <button
             onClick={() => setActiveTab("focus")}
-            className={`flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={cn(
+              "flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
               activeTab === "focus"
                 ? "bg-[#6366F1] text-white shadow-sm"
                 : "text-[#94A3B8] hover:text-[#F1F5F9]"
-            }`}
+            )}
           >
             <Timer className="w-3.5 h-3.5" />
             <span>{t("nav_focus")}</span>
@@ -44,11 +42,12 @@ export const MainWindow: React.FC = () => {
 
           <button
             onClick={() => setActiveTab("stats")}
-            className={`flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={cn(
+              "flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
               activeTab === "stats"
                 ? "bg-[#6366F1] text-white shadow-sm"
                 : "text-[#94A3B8] hover:text-[#F1F5F9]"
-            }`}
+            )}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>{t("nav_stats")}</span>
@@ -56,11 +55,12 @@ export const MainWindow: React.FC = () => {
 
           <button
             onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={cn(
+              "flex items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
               activeTab === "settings"
                 ? "bg-[#6366F1] text-white shadow-sm"
                 : "text-[#94A3B8] hover:text-[#F1F5F9]"
-            }`}
+            )}
           >
             <Settings className="w-3.5 h-3.5" />
             <span>{t("nav_settings")}</span>

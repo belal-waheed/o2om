@@ -7,12 +7,13 @@ import { useTimerStore } from "./stores/useTimerStore";
 export const App: React.FC = () => {
   const { initStore } = useTimerStore();
 
-  useEffect(() => {
-    initStore();
-  }, [initStore]);
-
   const params = new URLSearchParams(window.location.search);
   const win = params.get("win");
+  const targetWin = (win as "pill" | "break_overlay") || "main";
+
+  useEffect(() => {
+    initStore(targetWin);
+  }, [initStore, targetWin]);
 
   if (win === "pill") {
     return (

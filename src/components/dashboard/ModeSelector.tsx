@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useTimerStore } from "../../stores/useTimerStore";
+import { cn } from "../../lib/utils";
 
 export const ModeSelector: React.FC = () => {
   const { t } = useTranslation();
@@ -27,13 +28,12 @@ export const ModeSelector: React.FC = () => {
           {Array.from({ length: totalCycles }).map((_, i) => (
             <div
               key={i}
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                i + 1 === currentCycle
-                  ? "bg-[#6366F1] scale-125 ring-2 ring-[#6366F1]/30"
-                  : i + 1 < currentCycle
-                  ? "bg-[#10B981]"
-                  : "bg-[#2A3048]"
-              }`}
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all duration-200",
+                i + 1 === currentCycle && "bg-[#6366F1] scale-125 ring-2 ring-[#6366F1]/30",
+                i + 1 < currentCycle && "bg-[#10B981]",
+                i + 1 > currentCycle && "bg-[#2A3048]"
+              )}
             />
           ))}
         </div>

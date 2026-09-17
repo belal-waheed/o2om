@@ -19,7 +19,7 @@ o2om/
 │   ├── stores/                    # Zustand timer state store & IPC bridges
 │   ├── windows/                   # Window views (MainWindow, Pill, BreakOverlay)
 │   ├── locales/                   # Arabic (ar) & English (en) translations
-│   ├── lib/                       # Theme tokens, i18n, IPC APIs
+│   ├── lib/                       # Utilities (cn), i18n, IPC APIs
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css

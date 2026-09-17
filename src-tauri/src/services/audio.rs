@@ -55,15 +55,4 @@ impl AudioService {
         // Gentle step chime (880 Hz + 1320 Hz, 0.4s)
         Self::play_chime(880.0, 1320.0, 0.4);
     }
-
-    pub fn play_escalation(stage: u32, enabled: bool) {
-        if !enabled {
-            return;
-        }
-        if stage == 1 {
-            Self::play_chime(440.0, 660.0, 1.2);
-        } else {
-            Self::play_chime(392.0, 587.33, 1.5);
-        }
-    }
 }

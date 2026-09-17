@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Play, Pause, Maximize2, GripVertical } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
+import { cn } from "../../lib/utils";
 
 export const MiniPillView: React.FC = () => {
   const { t } = useTranslation();
@@ -21,35 +22,33 @@ export const MiniPillView: React.FC = () => {
   // If tucked to screen edge, render sleek translucent indicator aligned to the visible edge
   if (dockInfo?.is_tucked) {
     const edge = dockInfo.edge;
-    let alignmentClass = "items-center justify-center";
-    let tabShape = "rounded-xl";
+    const alignmentClass = cn(
+      "items-center justify-center",
+      edge === "right" && "items-center justify-start",
+      edge === "left" && "items-center justify-end",
+      edge === "top" && "items-end justify-center",
+      edge === "bottom" && "items-start justify-center"
+    );
 
-    if (edge === "right") {
-      // Window is at right edge of monitor; visible 26px is at the FAR LEFT of window
-      alignmentClass = "items-center justify-start";
-      tabShape = "rounded-l-xl border-r-0";
-    } else if (edge === "left") {
-      // Window is at left edge of monitor; visible 26px is at the FAR RIGHT of window
-      alignmentClass = "items-center justify-end";
-      tabShape = "rounded-r-xl border-l-0";
-    } else if (edge === "top") {
-      // Window is at top edge; visible 26px is at the BOTTOM of window
-      alignmentClass = "items-end justify-center";
-      tabShape = "rounded-b-xl border-t-0";
-    } else if (edge === "bottom") {
-      // Window is at bottom edge; visible 26px is at the TOP of window
-      alignmentClass = "items-start justify-center";
-      tabShape = "rounded-t-xl border-b-0";
-    }
+    const tabShape = cn(
+      "rounded-xl",
+      edge === "right" && "rounded-l-xl border-r-0",
+      edge === "left" && "rounded-r-xl border-l-0",
+      edge === "top" && "rounded-b-xl border-t-0",
+      edge === "bottom" && "rounded-t-xl border-b-0"
+    );
 
     return (
       <div
         onClick={() => setPillTucked(false)}
-        className={`w-full h-full flex ${alignmentClass} bg-transparent select-none cursor-pointer`}
+        className={cn("w-full h-full flex bg-transparent select-none cursor-pointer", alignmentClass)}
         title={t("app_title")}
       >
         <div
-          className={`w-[26px] h-[36px] bg-[#12141F]/90 backdrop-blur-md border border-[#3B4363] ${tabShape} flex items-center justify-center shadow-xl hover:bg-[#1A1E2E] transition-all duration-200 group`}
+          className={cn(
+            "w-[26px] h-[36px] bg-[#12141F]/90 backdrop-blur-md border border-[#3B4363] flex items-center justify-center shadow-xl hover:bg-[#1A1E2E] transition-all duration-200 group",
+            tabShape
+          )}
         >
           <span
             className="w-2.5 h-2.5 rounded-full transition-transform duration-200 group-hover:scale-125 shadow-sm"
@@ -65,9 +64,10 @@ export const MiniPillView: React.FC = () => {
       data-tauri-drag-region
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`flex items-center justify-between w-full h-full px-2 bg-[#0D0E15] border border-[#2A3048] rounded-xl select-none cursor-move shadow-2xl transition-colors duration-150 ${
-        isHovered ? "border-[#6366F1]/60 bg-[#12141F]" : ""
-      }`}
+      className={cn(
+        "flex items-center justify-between w-full h-full px-2 bg-[#0D0E15] border border-[#2A3048] rounded-xl select-none cursor-move shadow-2xl transition-colors duration-150",
+        isHovered && "border-[#6366F1]/60 bg-[#12141F]"
+      )}
     >
       {/* Drag Grip & Status Dot */}
       <div className="flex items-center gap-1.5" data-tauri-drag-region>

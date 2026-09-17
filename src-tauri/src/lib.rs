@@ -282,37 +282,6 @@ pub fn run() {
                                 message: msg,
                             });
                         }
-                        crate::core::engine::TickEvent::EscalationWarning { stage } => {
-                            AudioService::play_escalation(stage, sound);
-                            let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
-                            let msg = if stage == 1 {
-                                if lang == "ar" { "تنبيه إضافي: يرجى أخذ استراحة الآن!" } else { "Warning: Break time has passed, please take a rest!" }
-                            } else if lang == "ar" {
-                                "التنبيه الأخير: يرجى أخذ استراحة الآن لتجنب إجهاد الجلوس."
-                            } else {
-                                "Final warning: Please take a break now to avoid fatigue."
-                            };
-                            NotificationService::show_toast(&app_tick, title, msg);
-
-                            let _ = app_tick.emit("timer-escalation", EscalationPayload {
-                                stage,
-                                title: title.to_string(),
-                                message: msg.to_string(),
-                            });
-                        }
-                        crate::core::engine::TickEvent::AutoWorkReset => {
-                            AudioService::play_escalation(2, sound);
-                            let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
-                            let msg = if lang == "ar" {
-                                "التنبيه الأخير: تم استئناف مؤقت التركيز تلقائياً."
-                            } else {
-                                "Final warning: Focus session has resumed automatically."
-                            };
-                            NotificationService::show_toast(&app_tick, title, msg);
-                            WindowManager::hide_break_overlay(&app_tick);
-                            WindowManager::restore_to_main(&app_tick);
-                            let _ = app_tick.emit("pill-mode-changed", false);
-                        }
                         crate::core::engine::TickEvent::None => {}
                     }
 

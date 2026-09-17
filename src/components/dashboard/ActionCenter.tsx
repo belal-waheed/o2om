@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
+import { cn } from "../../lib/utils";
 
 export const ActionCenter: React.FC = () => {
   const { t } = useTranslation();
@@ -35,7 +36,10 @@ export const ActionCenter: React.FC = () => {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={togglePause}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm shadow-lg shadow-[#6366F1]/20 transition-all active:scale-[0.98] cursor-pointer"
+            className={cn(
+              "flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm shadow-lg transition-all active:scale-[0.98] cursor-pointer",
+              "bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-[#6366F1]/20"
+            )}
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
             <span>{t(isPaused ? "btn_resume" : "btn_pause")}</span>
@@ -43,7 +47,10 @@ export const ActionCenter: React.FC = () => {
 
           <button
             onClick={resetTimer}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9] font-bold text-sm border border-[#2A3048] transition-all active:scale-[0.98] cursor-pointer"
+            className={cn(
+              "flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm border border-[#2A3048] transition-all active:scale-[0.98] cursor-pointer",
+              "bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9]"
+            )}
           >
             <RotateCcw className="w-4 h-4 text-[#94A3B8]" />
             <span>{t("btn_reset")}</span>
@@ -56,7 +63,10 @@ export const ActionCenter: React.FC = () => {
         <div className="flex flex-col gap-2">
           <button
             onClick={() => startBreak(true)}
-            className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white font-bold text-sm shadow-lg shadow-[#10B981]/25 transition-all active:scale-[0.98] cursor-pointer animate-pulse"
+            className={cn(
+              "flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm shadow-lg transition-all active:scale-[0.98] cursor-pointer animate-pulse",
+              "bg-[#10B981] hover:bg-[#059669] text-white shadow-[#10B981]/25"
+            )}
           >
             <Activity className="w-4 h-4" />
             <span>{t("btn_start_exercises", "بدء الاستراحة والتمارين")}</span>
@@ -65,7 +75,10 @@ export const ActionCenter: React.FC = () => {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => startBreak(false)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9] font-semibold text-xs border border-[#2A3048] transition-all cursor-pointer"
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold text-xs border border-[#2A3048] transition-all cursor-pointer",
+                "bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9]"
+              )}
             >
               <Coffee className="w-3.5 h-3.5 text-[#10B981]" />
               <span>{t("btn_quiet_break", "استراحة هادئة")}</span>
@@ -73,7 +86,10 @@ export const ActionCenter: React.FC = () => {
 
             <button
               onClick={snoozeTimer}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9] font-semibold text-xs border border-[#2A3048] transition-all cursor-pointer"
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold text-xs border border-[#2A3048] transition-all cursor-pointer",
+                "bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9]"
+              )}
             >
               <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
               <span>{t("btn_snooze", "تأجيل 5 دقائق")}</span>
@@ -86,7 +102,10 @@ export const ActionCenter: React.FC = () => {
       {status === "waiting_work" && (
         <button
           onClick={startWork}
-          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm shadow-xl shadow-[#6366F1]/30 transition-all active:scale-[0.98] cursor-pointer animate-pulse"
+          className={cn(
+            "flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm shadow-xl transition-all active:scale-[0.98] cursor-pointer animate-pulse",
+            "bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-[#6366F1]/30"
+          )}
         >
           <Play className="w-4 h-4" />
           <span>{t("btn_start_work", "بدء جلسة التركيز")}</span>
@@ -98,7 +117,10 @@ export const ActionCenter: React.FC = () => {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={skipBreak}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white font-bold text-sm shadow-md shadow-[#10B981]/20 cursor-pointer"
+            className={cn(
+              "flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm shadow-md cursor-pointer",
+              "bg-[#10B981] hover:bg-[#059669] text-white shadow-[#10B981]/20"
+            )}
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>{t("btn_finish_break", "إنهاء الاستراحة")}</span>
@@ -106,7 +128,10 @@ export const ActionCenter: React.FC = () => {
 
           <button
             onClick={resetTimer}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9] font-bold text-sm border border-[#2A3048] cursor-pointer"
+            className={cn(
+              "flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm border border-[#2A3048] cursor-pointer",
+              "bg-[#1F2333] hover:bg-[#2A3048] text-[#F1F5F9]"
+            )}
           >
             <RotateCcw className="w-4 h-4 text-[#94A3B8]" />
             <span>{t("btn_reset")}</span>
@@ -117,7 +142,10 @@ export const ActionCenter: React.FC = () => {
       {/* 5. Bottom Floating Mini-Pill Dock Button */}
       <button
         onClick={() => setPillMode(true)}
-        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#161822] hover:bg-[#1F2333] text-[#94A3B8] hover:text-[#F1F5F9] font-medium text-xs border border-[#2A3048] transition-all cursor-pointer"
+        className={cn(
+          "w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-medium text-xs border border-[#2A3048] transition-all cursor-pointer",
+          "bg-[#161822] hover:bg-[#1F2333] text-[#94A3B8] hover:text-[#F1F5F9]"
+        )}
       >
         <Minimize2 className="w-3.5 h-3.5" />
         <span>{t("btn_dock_pill", "تصغير إلى شريط عائم")}</span>

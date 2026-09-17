@@ -1,6 +1,6 @@
-﻿# ADR 0002: Transition to Tauri v2 Multi-Window Architecture
+# ADR 0002: Transition to Tauri v2 Multi-Window Architecture
 
-- **Status**: Superseded (ADR 0001 superseded by ADR 0002)
+- **Status**: Accepted (Supersedes ADR 0001)
 - **Date**: 2026-09-01
 - **Author**: O2om Core Architecture Team
 

@@ -95,8 +95,6 @@ pub enum TickEvent {
     None,
     WorkCompleted,
     BreakCompleted,
-    EscalationWarning { stage: u32 },
-    AutoWorkReset,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -163,6 +161,7 @@ impl TimerEngine {
         (self.settings.snooze_min.max(1) as u64) * 60 * 1000
     }
 
+    #[allow(dead_code)]
     pub fn escalation_ms(&self) -> u64 {
         (self.settings.escalation_min.max(1) as u64) * 60 * 1000
     }
@@ -445,29 +444,12 @@ impl TimerEngine {
             }
         }
 
-        // 4. Waiting Break Escalation
+        // 4. Waiting Break State (quietly pauses at 00:00 without escalation chimes or auto-reset)
         if self.status == TimerStatus::WaitingBreak {
             if physical_idle_ms >= self.idle_threshold_ms() {
                 self.is_idle = true;
-                return TickEvent::None;
             } else {
                 self.is_idle = false;
-            }
-
-            if let Some(start) = self.break_wait_start {
-                let wait_duration = now.duration_since(start).as_millis() as u64;
-                if wait_duration >= self.escalation_ms() {
-                    if self.reminder_stage == 0 {
-                        self.reminder_stage = 1;
-                        self.break_wait_start = Some(now);
-                        return TickEvent::EscalationWarning { stage: 1 };
-                    } else if self.reminder_stage == 1 {
-                        self.reminder_stage = 2;
-                        self.break_wait_start = Some(now);
-                        self.reset_to_work();
-                        return TickEvent::AutoWorkReset;
-                    }
-                }
             }
             return TickEvent::None;
         }
@@ -642,5 +624,27 @@ mod tests {
         assert_eq!(event, HydrationEvent::WorkCompletedOffline);
         assert_eq!(engine.status, TimerStatus::WaitingBreak);
         assert_eq!(engine.remaining_ms, 0);
+    }
+
+    #[test]
+    fn test_waiting_break_remains_quiet() {
+        let settings = EngineSettings::default();
+        let mut engine = TimerEngine::new(settings);
+        engine.remaining_ms = 50;
+        engine.last_tick = Instant::now() - std::time::Duration::from_millis(100);
+
+        // Tick to complete work
+        let event = engine.tick(0);
+        assert_eq!(event, TickEvent::WorkCompleted);
+        assert_eq!(engine.status, TimerStatus::WaitingBreak);
+        assert_eq!(engine.remaining_ms, 0);
+
+        // Subsequent ticks should remain quietly in WaitingBreak with TickEvent::None
+        for _ in 0..10 {
+            let event = engine.tick(0);
+            assert_eq!(event, TickEvent::None);
+            assert_eq!(engine.status, TimerStatus::WaitingBreak);
+            assert_eq!(engine.remaining_ms, 0);
+        }
     }
 }

@@ -1,6 +1,6 @@
 # ADR 0001: AutoHotkey v2 Native Architecture & Non-Blocking State Engine
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR 0002
 - **Date**: 2026-08-15
 - **Author**: O2om Core Architecture Team
 

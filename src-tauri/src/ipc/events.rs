@@ -23,6 +23,7 @@ pub struct BreakCompletedPayload {
     pub message: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EscalationPayload {
     pub stage: u32,
