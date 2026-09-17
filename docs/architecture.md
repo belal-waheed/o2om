@@ -1,4 +1,4 @@
-﻿# O2om (قُوم) — System Architecture (v4.0)
+# O2om (قُوم) — System Architecture (v4.0)
 
 This document describes the architectural layout, core subsystems, multi-window topology, state engine contracts, design tokens, and engineering invariants of **O2om v4.0** built with **Tauri v2**.
 
@@ -57,8 +57,8 @@ The application orchestrates three independent windows managed centrally by Wind
 2. **pill**:
    - Draggable, always-on-top micro-pill (176x42px, frameless, transparent).
    - Injected with Win32 WS_EX_TOOLWINDOW to isolate it from Windows Alt+Tab and taskbar.
-   - Supports screen edge docking and auto-tuck unless 	iling_wm_mode is enabled.
-3. **reak_overlay**:
+   - Supports screen edge docking and auto-tuck unless `tiling_wm_mode` is enabled.
+3. **`break_overlay`**:
    - Guided stretch and posture routine window (720x520px, centered, always-on-top).
    - Step-by-step stretch coach with individual exercise countdowns and sound chimes.
 
@@ -67,7 +67,7 @@ The application orchestrates three independent windows managed centrally by Wind
 ## 3. GlazeWM & Komorebi Compatibility
 
 For users running tiling window managers (TWM):
-- TWM Mode flag (	iling_wm_mode) disables edge snapping and tucking.
+- TWM Mode flag (`tiling_wm_mode`) disables edge snapping and tucking.
 - Windows are given appropriate fixed dimensions and window attributes to prevent tiling layout conflicts.
 
 ---

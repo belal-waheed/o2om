@@ -1,35 +1,76 @@
-# O2om (قُوم) — Stand-Up & Focus Ergonomic Health Companion for Windows
+# O2om (قُوم) — Ergonomic Desktop Focus & Stand-Up Companion
 
-> **O2om** (derived from the Arabic imperative **قُوم**, meaning * Stand up!*) is an open-source, high-performance desktop focus and posture companion for Windows built with **Tauri v2** (Rust backend + React 19 / Vite / Tailwind CSS v4 frontend). It features multi-mode interval pacing (Pomodoro, Balanced Stand-Up, Eye Guard 20-20-20), step-by-step guided stretch routines, a floating edge-dockable mini-pill widget, zero-polling physical idle detection, and native Arabic (RTL) & English localization.
+> O2om (derived from the Arabic imperative قُوم, meaning "Stand up!") is an open-source, high-performance desktop focus and posture companion for Windows built with Tauri v2 (Rust backend + React 19 / TypeScript / Vite / Tailwind CSS v4 frontend). It features multi-mode interval pacing (Pomodoro, Balanced Stand-Up, Eye Guard 20-20-20, Custom), step-by-step guided stretch routines, an edge-docking floating mini-pill widget, physical idle detection via Win32 GetLastInputInfo, single-instance process enforcement, quiet post-session transitions, and dual Arabic (RTL) & English localization.
 
-## Key Technical Specifications
-- **Project Name**: O2om (قُوم)
-- **Version**: v4.0.0
-- **Target Platform**: Windows 10 / Windows 11 (64-bit)
-- **Architecture**: Tauri v2 Multi-Window Topology (main, pill, reak_overlay)
-- **Backend Runtime**: Rust 2021 (High-precision Async Engine, SQLite via usqlite, Win32 API, odio audio)
-- **Frontend Stack**: React 19, TypeScript, Vite, Tailwind CSS v4, Zustand, Lucide React
-- **Localization**: Native Arabic (RTL) & English (LTR) via i18next
-- **Window Management**: GlazeWM & Komorebi tiling window manager compatibility
-- **Memory Footprint**: ~30MB RAM (<5% CPU during active animations, 0% idle)
-- **License**: MIT Open Source License
+## Technical Specifications
 
-## Core Capabilities
-1. **Multi-Mode Ergonomic Engine**:
-   - Deep Work Pomodoro (25m work / 5m short break / 15m long break after 4 cycles).
-   - Balanced Stand-Up (40m work / 5m break).
-   - 20-20-20 Eye Strain Guard (20m work / 20s rest).
-   - Custom user-defined intervals.
-2. **Interactive Guided Break Overlay**:
-   - 5-step guided mobility routine with individual exercise timers and chimes.
-3. **Floating Edge-Dockable Mini-Pill**:
-   - Frameless, transparent widget with Win32 WS_EX_TOOLWINDOW isolation, auto-snapping, and cursor tucking.
-4. **Physical Inactivity Detection**:
-   - Hardware idle detection via Win32 GetLastInputInfo that pauses work sessions without halting stretch routines.
-5. **SQLite Persistence**:
-   - Stores daily goals, completed stands, focus time, and multi-day streaks in local SQLite database.
+- Project Name: O2om (قُوم)
+- Latest Release: v4.0.3
+- Target Operating System: Windows 10 (1809+) & Windows 11 (64-bit x64)
+- Desktop Runtime: Tauri v2.2+ (tauri, tauri-plugin-notification, tauri-plugin-autostart, tauri-plugin-single-instance)
+- Backend Stack: Rust 2021 (tokio 100ms interval, rusqlite with WAL mode and in-memory mutex, windows-rs Win32 API, rodio synthesized audio)
+- Frontend Stack: React 19, TypeScript 5.7, Vite 6, Tailwind CSS v4, Zustand 5, Lucide React, i18next
+- Process Model: Single-instance enforced (secondary launches focus the existing main window)
+- Window Topology:
+  - main: 420x490px dashboard, analytics, and configuration (hides to tray on close)
+  - pill: 176x42px frameless floating micro-timer with Win32 WS_EX_TOOLWINDOW taskbar isolation and edge-snapping
+  - break_overlay: 720x520px centered, always-on-top guided 5-step ergonomics stretch coach
+- Tiling Window Manager Support: GlazeWM & Komorebi compatible (tiling_wm_mode setting disables edge-snapping)
+- Physical Inactivity Detection: Win32 GetLastInputInfo physical idle detection (pauses work countdowns, never interrupts active breaks)
+- Persistence Layer: SQLite in %APPDATA%\com.o2om.desktop\o2om.db with transactional integrity and auto-migration
+- Runtime Footprint: ~30MB RAM, 0% idle CPU, no Electron or Chromium background bloat
+- License: MIT License
 
-## Distribution & Setup
-- **Standalone Executable**: o2om.exe
-- **Windows Setup Installer**: dist-setup/o2om-setup.exe (NSIS)
-- **Repository**: https://github.com/BelalWaheed/o2om
+## Core Architecture & Engine Contracts
+
+```
+[Tokio Interval 100ms]
+         │
+         ▼
+[TimerEngine (Rust)] ───► [Win32 GetLastInputInfo] (Hardware Idle Detection)
+         │
+         ├───► Work Session Active ───► Inactivity Threshold ───► Pause & Flag Idle
+         │
+         ├───► Work Session Concluded ───► Quiet WaitingBreak (00:00, no nagging chimes)
+         │
+         ├───► User Initiates Break ───► Break Timer / Guided Stretch Overlay (720x520)
+         │
+         └───► Break Concluded ───► Rising Harmonic Audio Chime (rodio) ───► WaitingWork
+```
+
+## IPC Command API (Tauri Commands)
+
+- get_state(): Returns TimerStateSnapshot (status, remaining_ms, cycle, progress).
+- start_work(): Initiates or resumes focus session.
+- start_break(guided: bool): Launches break session or displays break_overlay.
+- skip_break(): Skips waiting break and returns directly to work mode.
+- toggle_pause(): Toggles active countdown pause state.
+- reset_timer(): Resets current session timer to baseline duration.
+- snooze_timer(): Postpones break notification by configured snooze duration (default 5m).
+- set_mode(mode: SessionMode): Switches interval preset (pomodoro, standup, eyeguard, custom).
+- get_settings(): Loads persisted EngineSettings from SQLite.
+- save_settings(settings: EngineSettings): Persists updated configuration and recalibrates engine.
+- get_health_stats(): Queries today's stands, streak count, and historical focus minutes.
+- get_weekly_history(): Retrieves daily completion records for the past 7 days.
+- reset_all_stats(): Clears health history, daily stands, and active streaks while preserving user preferences.
+- set_pill_mode(is_pill: bool): Switches window visibility between main dashboard and floating mini-pill.
+- snap_pill_to_edge(): Computes monitor edge docking position for mini-pill.
+- set_pill_tucked(tucked: bool): Tucks or un-tucks mini-pill behind screen border.
+- close_break_overlay(): Dismisses stretch overlay and returns to main window.
+
+## Local Persistence Schema (SQLite)
+
+Database path: `%APPDATA%\com.o2om.desktop\o2om.db`
+
+Tables:
+1. `settings`: Single-row configuration key-value storage.
+2. `daily_health_records`: Daily rows recording (date, stands_count, stand_goal, focus_minutes, goal_met).
+3. `streaks_metadata`: Single-row tracking (current_streak_days, best_streak_days, last_active_date).
+4. `active_session`: Ephemeral snapshot supporting zero-drift crash/restart hydration.
+
+## Distribution & Installer Binaries
+
+- Recommended Windows Setup: `dist-setup/o2om-setup.exe` (NSIS setup with pre-install auto-kill hook)
+- Archive NSIS: `dist-setup/O2om_4.0.3_x64-setup.exe`
+- Enterprise Windows Installer: `dist-setup/O2om_4.0.3_x64_en-US.msi` (MSI for GPO / Intune)
+- Repository: `https://github.com/belal-waheed/o2om`

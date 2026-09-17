@@ -18,6 +18,6 @@ While the original AutoHotkey v2 prototype achieved an ultra-low memory footprin
 ## 2. Decision
 
 We chose **Tauri v2** with a **Rust backend** and **React 19 + Tailwind CSS v4** frontend:
-- **Rust Core**: Drives high-precision interval timers (100ms drift compensation), direct Win32 hardware idle monitoring (GetLastInputInfo), native audio synthesis (odio), and SQLite persistence (usqlite).
-- **Multi-Window Topology**: Central WindowManager controlling main, pill (with WS_EX_TOOLWINDOW taskbar isolation), and reak_overlay.
+- **Rust Core**: Drives high-precision interval timers (100ms drift compensation), direct Win32 hardware idle monitoring (GetLastInputInfo), native audio synthesis (rodio), and SQLite persistence (rusqlite).
+- **Multi-Window Topology**: Central WindowManager controlling main, pill (with WS_EX_TOOLWINDOW taskbar isolation), and break_overlay.
 - **Lightweight Footprint**: Compiled standalone binary (~15MB), ~30MB runtime memory, and 0% idle CPU.

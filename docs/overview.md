@@ -1,4 +1,4 @@
-﻿# O2om (قُوم) — Overview & Product Vision (v4.0)
+# O2om (قُوم) — Overview & Product Vision (v4.0)
 
 **O2om** (derived from the Arabic imperative **قُوم**, meaning * Stand up!*) is an open-source, high-craft desktop health, posture, and ergonomics companion for Windows built with **Tauri v2** (Rust + React 19). It mitigates sedentary fatigue, musculoskeletal strain, and digital eye strain for software engineers, remote professionals, gamers, and desk workers.
 
@@ -18,7 +18,7 @@ Prolonged seated desk work degrades circulation, weakens posterior posture muscl
 - **Interactive Guided Stretch Routines**: 5-step mobility routines with individual countdowns, audio chimes, and illustrations.
 - **Floating Mini-Pill Widget**: Always-on-top, draggable micro-timer widget with double-click dashboard restoration.
 - **Hardware Idle Detection**: Win32 GetLastInputInfo hardware polling suspends work countdowns when users step away, without pausing active stretch breaks.
-- **Native Dual Localization**: Arabic (r) default with full RTL mirroring, alongside English (n).
+- **Native Dual Localization**: Arabic (ar) default with full RTL mirroring, alongside English (en).
 
 ---
 
