@@ -112,5 +112,8 @@ export const tauriApi = {
   onPillDockChanged: (cb: (dock: DockInfo) => void): Promise<UnlistenFn> => {
     return listen<DockInfo>("pill-dock-changed", (event) => cb(event.payload));
   },
+  onHealthSummaryUpdated: (cb: (summary: HealthStatsSummary) => void): Promise<UnlistenFn> => {
+    return listen<HealthStatsSummary>("health-summary-updated", (event) => cb(event.payload));
+  },
 };
 

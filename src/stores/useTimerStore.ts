@@ -88,6 +88,10 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
           });
         });
 
+        await tauriApi.onHealthSummaryUpdated((summary) => {
+          set({ healthSummary: summary });
+        });
+
         if (windowLabel === "pill") {
           await tauriApi.onPillDockChanged((dock) => {
             set({ dockInfo: dock });
@@ -122,6 +126,10 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
           snapshot: payload.snapshot,
           healthSummary: payload.health_summary,
         });
+      });
+
+      await tauriApi.onHealthSummaryUpdated((summary) => {
+        set({ healthSummary: summary });
       });
 
       // Listen for tray pill toggle event
@@ -234,8 +242,10 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
     try {
       await tauriApi.resetAllStats();
       await get().refreshStats();
+      await get().resetTimer();
     } catch (e) {
-      console.error(e);
+      console.error("Failed to reset stats:", e);
+      throw e;
     }
   },
 }));

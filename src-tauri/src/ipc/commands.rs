@@ -145,14 +145,13 @@ pub async fn get_weekly_history(state: State<'_, SharedState>) -> Result<Vec<Dai
 }
 
 #[tauri::command]
-pub async fn reset_all_stats(state: State<'_, SharedState>) -> Result<(), String> {
+pub async fn reset_all_stats(state: State<'_, SharedState>, app: tauri::AppHandle) -> Result<(), String> {
     let mut app_state = state.lock().await;
-    let res = app_state.db.reset_all_stats();
-    if res.is_ok() {
-        let goal = app_state.engine.settings.daily_stand_goal;
-        app_state.health_summary_cache = app_state.db.get_health_stats(goal);
-    }
-    res.map_err(|e| e.to_string())
+    app_state.db.reset_all_stats().map_err(|e| e.to_string())?;
+    let goal = app_state.engine.settings.daily_stand_goal;
+    app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+    let _ = crate::ipc::events::emit_health_summary(&app, &app_state.health_summary_cache);
+    Ok(())
 }
 
 #[tauri::command]

@@ -12,6 +12,7 @@ import {
   Magnet,
   Minimize2,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
@@ -19,7 +20,28 @@ import type { EngineSettings } from "../../lib/ipc";
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
-  const { settings, saveSettings, setActiveTab } = useTimerStore();
+  const { settings, saveSettings, setActiveTab, resetStats } = useTimerStore();
+
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleConfirmReset = async () => {
+    try {
+      setResetting(true);
+      setResetError(null);
+      await resetStats();
+      setShowResetConfirm(false);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2500);
+    } catch (err) {
+      console.error("Failed to reset stats:", err);
+      setResetError(String(err));
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const [formData, setFormData] = useState<EngineSettings>({
     mode: "pomodoro",
@@ -292,7 +314,74 @@ export const SettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* 5. Save Button */}
+      {/* 5. Danger Zone: Reset All Data */}
+      <div className="border border-rose-500/20 bg-rose-500/5 p-4 rounded-xl flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-rose-400">
+          <RotateCcw className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <span>{t("danger_zone")}</span>
+        </div>
+
+        <p className="text-[11px] text-[#94A3B8] leading-relaxed">
+          {t("danger_zone_desc")}
+        </p>
+
+        {resetSuccess && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            <Check className="w-4 h-4 flex-shrink-0" />
+            <span>{t("msg_reset_success")}</span>
+          </div>
+        )}
+
+        {resetError && (
+          <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-200 text-xs">
+            {resetError}
+          </div>
+        )}
+
+        {!showResetConfirm ? (
+          <button
+            type="button"
+            onClick={() => setShowResetConfirm(true)}
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{t("btn_reset_all")}</span>
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2 pt-1">
+            <p className="text-xs text-rose-300 font-medium leading-normal">
+              {t("msg_reset_confirm")}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 py-2 px-3 rounded-lg bg-[#1F2333] hover:bg-[#2A3048] text-[#94A3B8] hover:text-[#F1F5F9] text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                {t("btn_cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={handleConfirmReset}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              >
+                {resetting ? (
+                  <span>{t("msg_resetting")}</span>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{t("btn_confirm_reset")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 6. Save Button */}
       <button
         onClick={handleSave}
         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm shadow-lg shadow-[#6366F1]/20 transition-all active:scale-[0.98] cursor-pointer mt-1"

@@ -29,6 +29,10 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
         ))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let _ = crate::ui::windows::WindowManager::set_pill_mode(app, false);
+            crate::ui::windows::WindowManager::show_main(app);
+        }))
         .setup(|app| {
             // Initialize startup tick for idle monitor (prevents immediate boot freeze)
             IdleMonitor::init();
