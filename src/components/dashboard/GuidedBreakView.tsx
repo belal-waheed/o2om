@@ -19,6 +19,7 @@ export const GuidedBreakView: React.FC = () => {
   const [routine, setRoutine] = useState<ExerciseStep[]>([]);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);
   const [stepSecondsLeft, setStepSecondsLeft] = useState<number>(30);
+  const isOnBreak = snapshot?.status === "on_break";
   const isPaused = snapshot?.is_paused || false;
 
   useEffect(() => {
@@ -31,9 +32,17 @@ export const GuidedBreakView: React.FC = () => {
     });
   }, []);
 
+  // Reset exercise routine when entering a break session
+  useEffect(() => {
+    if (isOnBreak) {
+      setCurrentStepIdx(0);
+      setStepSecondsLeft(routine[0]?.duration_sec || 30);
+    }
+  }, [isOnBreak]);
+
   // Step countdown tick
   useEffect(() => {
-    if (isPaused || routine.length === 0) return;
+    if (!isOnBreak || isPaused || routine.length === 0) return;
 
     const timer = setInterval(() => {
       setStepSecondsLeft((prev) => {
@@ -41,7 +50,9 @@ export const GuidedBreakView: React.FC = () => {
           if (currentStepIdx < routine.length - 1) {
             const nextIdx = currentStepIdx + 1;
             setCurrentStepIdx(nextIdx);
-            tauriApi.playStepTransition();
+            if (isOnBreak) {
+              tauriApi.playStepTransition();
+            }
             return routine[nextIdx].duration_sec;
           }
           return 0;
@@ -51,14 +62,16 @@ export const GuidedBreakView: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentStepIdx, routine, isPaused]);
+  }, [currentStepIdx, routine, isPaused, isOnBreak]);
 
   const handleNextStep = () => {
     if (currentStepIdx < routine.length - 1) {
       const nextIdx = currentStepIdx + 1;
       setCurrentStepIdx(nextIdx);
       setStepSecondsLeft(routine[nextIdx].duration_sec);
-      tauriApi.playStepTransition();
+      if (isOnBreak) {
+        tauriApi.playStepTransition();
+      }
     } else {
       skipBreak();
       tauriApi.closeBreakOverlay();
