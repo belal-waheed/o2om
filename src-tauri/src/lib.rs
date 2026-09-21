@@ -7,7 +7,7 @@ pub mod ui;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{Emitter, Listener, Manager};
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
 
 use crate::core::engine::TimerEngine;
@@ -15,22 +15,13 @@ use crate::db::repository::DbRepository;
 use crate::ipc::commands::*;
 use crate::ipc::events::*;
 use crate::services::audio::AudioService;
+use crate::services::autostart::AutostartService;
 use crate::services::idle::IdleMonitor;
 use crate::services::notification::NotificationService;
 use crate::ui::tray::TrayManager;
 use crate::ui::windows::WindowManager;
 
 static MOVE_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-pub fn reconcile_autostart(app: &tauri::AppHandle, enabled: bool) -> Result<(), Box<dyn std::error::Error>> {
-    if enabled {
-        let _ = app.autolaunch().disable();
-        app.autolaunch().enable()?;
-    } else {
-        let _ = app.autolaunch().disable();
-    }
-    Ok(())
-}
 
 pub fn run() {
     tauri::Builder::default()
@@ -69,7 +60,9 @@ pub fn run() {
             let current_date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
 
             let app_handle = app.handle().clone();
-            let _ = reconcile_autostart(&app_handle, engine.settings.start_with_windows);
+            if let Err(e) = AutostartService::reconcile(&app_handle, engine.settings.start_with_windows) {
+                eprintln!("[O2om] Autostart reconciliation warning: {}", e);
+            }
 
             let state: SharedState = Arc::new(Mutex::new(AppState { engine, db, health_summary_cache, current_date_str }));
             app.manage(state.clone());

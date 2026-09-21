@@ -5,6 +5,7 @@ use crate::core::engine::{EngineSettings, SessionMode, TimerEngine, TimerStateSn
 use crate::core::routines::{ExerciseStep, RoutineRegistry};
 use crate::db::repository::{DailyHealthRecord, DbRepository, HealthStatsSummary};
 use crate::services::audio::AudioService;
+use crate::services::autostart::AutostartService;
 use crate::ui::windows::WindowManager;
 
 pub struct AppState {
@@ -121,7 +122,9 @@ pub async fn save_settings(
         return Err(format!("Failed to save settings to database: {}", e));
     }
 
-    let _ = crate::reconcile_autostart(&app, settings.start_with_windows);
+    if let Err(e) = AutostartService::reconcile(&app, settings.start_with_windows) {
+        eprintln!("[O2om] Autostart reconciliation warning: {}", e);
+    }
 
     if goal_changed {
         app_state.health_summary_cache = app_state.db.get_health_stats(settings.daily_stand_goal);
