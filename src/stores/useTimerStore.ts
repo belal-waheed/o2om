@@ -6,6 +6,7 @@ import {
   type HealthStatsSummary,
   type SessionMode,
   type TimerStateSnapshot,
+  type UnlistenFn,
 } from "../lib/ipc";
 import { setLanguage } from "../lib/i18n";
 
@@ -17,12 +18,14 @@ interface TimerStoreState {
   isPillMode: boolean;
   dockInfo: DockInfo | null;
   isInitialized: boolean;
+  unlisteners: UnlistenFn[];
 
   setActiveTab: (tab: "focus" | "stats" | "settings") => void;
   setPillMode: (isPill: boolean) => Promise<void>;
   togglePillMode: () => Promise<void>;
   setPillTucked: (tucked: boolean) => Promise<void>;
   initStore: (windowLabel?: "main" | "pill" | "break_overlay") => Promise<void>;
+  cleanup: () => void;
   startWork: () => Promise<void>;
   startBreak: (guided: boolean) => Promise<void>;
   skipBreak: () => Promise<void>;
@@ -43,6 +46,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
   isPillMode: false,
   dockInfo: null,
   isInitialized: false,
+  unlisteners: [],
 
   setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -70,36 +74,57 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
     await get().setPillMode(next);
   },
 
+  cleanup: () => {
+    const { unlisteners } = get();
+    for (const unlisten of unlisteners) {
+      try {
+        unlisten();
+      } catch (e) {
+        console.error("Error unlistening:", e);
+      }
+    }
+    set({ unlisteners: [], isInitialized: false });
+  },
+
   initStore: async (windowLabel: "main" | "pill" | "break_overlay" = "main") => {
     if (get().isInitialized) return;
+    set({ isInitialized: true });
+
+    const newUnlisteners: UnlistenFn[] = [];
 
     try {
       if (windowLabel !== "main") {
         const initialState = await tauriApi.getState();
         set({
           snapshot: initialState,
-          isInitialized: true,
         });
 
-        await tauriApi.onTick((payload) => {
+        const unlistenTick = await tauriApi.onTick((payload) => {
           set({
             snapshot: payload.snapshot,
             healthSummary: payload.health_summary,
           });
         });
+        newUnlisteners.push(unlistenTick);
 
-        await tauriApi.onHealthSummaryUpdated((summary) => {
+        const unlistenHealth = await tauriApi.onHealthSummaryUpdated((summary) => {
           set({ healthSummary: summary });
         });
+        newUnlisteners.push(unlistenHealth);
 
         if (windowLabel === "pill") {
-          await tauriApi.onPillDockChanged((dock) => {
+          const unlistenDock = await tauriApi.onPillDockChanged((dock) => {
             set({ dockInfo: dock });
           });
-          await tauriApi.onPillModeChanged((isPill) => {
+          newUnlisteners.push(unlistenDock);
+
+          const unlistenPillMode = await tauriApi.onPillModeChanged((isPill) => {
             set({ isPillMode: isPill, dockInfo: isPill ? get().dockInfo : null });
           });
+          newUnlisteners.push(unlistenPillMode);
         }
+
+        set((state) => ({ unlisteners: [...state.unlisteners, ...newUnlisteners] }));
         return;
       }
 
@@ -117,37 +142,51 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
         snapshot: initialState,
         settings: initialSettings,
         healthSummary: initialStats,
-        isInitialized: true,
       });
 
       // Subscribe to 1-second background tick event
-      await tauriApi.onTick((payload) => {
+      const unlistenTick = await tauriApi.onTick((payload) => {
         set({
           snapshot: payload.snapshot,
           healthSummary: payload.health_summary,
         });
       });
+      newUnlisteners.push(unlistenTick);
 
-      await tauriApi.onHealthSummaryUpdated((summary) => {
+      const unlistenHealth = await tauriApi.onHealthSummaryUpdated((summary) => {
         set({ healthSummary: summary });
       });
+      newUnlisteners.push(unlistenHealth);
 
       // Listen for tray pill toggle event
-      await tauriApi.onTogglePill(() => {
+      const unlistenTogglePill = await tauriApi.onTogglePill(() => {
         get().togglePillMode();
       });
+      newUnlisteners.push(unlistenTogglePill);
 
       // Listen for auto-restore pill mode events from backend
-      await tauriApi.onPillModeChanged((isPill) => {
+      const unlistenPillMode = await tauriApi.onPillModeChanged((isPill) => {
         set({ isPillMode: isPill, dockInfo: isPill ? get().dockInfo : null });
       });
+      newUnlisteners.push(unlistenPillMode);
 
       // Listen for dock and tuck state changes from backend
-      await tauriApi.onPillDockChanged((dock) => {
+      const unlistenDock = await tauriApi.onPillDockChanged((dock) => {
         set({ dockInfo: dock });
       });
+      newUnlisteners.push(unlistenDock);
+
+      set((state) => ({ unlisteners: [...state.unlisteners, ...newUnlisteners] }));
     } catch (err) {
       console.error("Failed to initialize timer store:", err);
+      for (const unlisten of newUnlisteners) {
+        try {
+          unlisten();
+        } catch (e) {
+          // ignore
+        }
+      }
+      set({ isInitialized: false });
     }
   },
 

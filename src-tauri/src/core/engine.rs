@@ -115,6 +115,7 @@ pub struct TimerEngine {
     pub reminder_stage: u32,
     pub is_paused: bool,
     pub is_idle: bool,
+    pub pre_pause_status: Option<TimerStatus>,
 }
 
 impl TimerEngine {
@@ -131,6 +132,7 @@ impl TimerEngine {
             reminder_stage: 0,
             is_paused: false,
             is_idle: false,
+            pre_pause_status: None,
         };
         engine.reset_to_work();
         engine
@@ -226,6 +228,14 @@ impl TimerEngine {
             TimerStatus::Paused => "paused",
             TimerStatus::Idle => "idle",
         };
+        let pre_pause_str = self.pre_pause_status.as_ref().map(|s| match s {
+            TimerStatus::Work => "work",
+            TimerStatus::WaitingBreak => "waiting_break",
+            TimerStatus::OnBreak => "on_break",
+            TimerStatus::WaitingWork => "waiting_work",
+            TimerStatus::Paused => "work",
+            TimerStatus::Idle => "idle",
+        }.to_string());
         let now_epoch = chrono::Utc::now().timestamp();
         PersistedSession {
             status: status_str.to_string(),
@@ -235,6 +245,7 @@ impl TimerEngine {
             is_paused: self.is_paused,
             is_guided_exercise: self.is_guided_exercise,
             last_saved_epoch: now_epoch,
+            pre_pause_status: pre_pause_str,
         }
     }
 
@@ -264,6 +275,14 @@ impl TimerEngine {
             self.is_paused = true;
             self.status = TimerStatus::Paused;
             self.remaining_ms = session.remaining_ms;
+            self.pre_pause_status = session.pre_pause_status.and_then(|s| match s.as_str() {
+                "work" => Some(TimerStatus::Work),
+                "on_break" => Some(TimerStatus::OnBreak),
+                "waiting_break" => Some(TimerStatus::WaitingBreak),
+                "waiting_work" => Some(TimerStatus::WaitingWork),
+                "idle" => Some(TimerStatus::Idle),
+                _ => None,
+            });
             return HydrationEvent::None;
         }
 
@@ -348,6 +367,7 @@ impl TimerEngine {
         self.is_guided_exercise = false;
         self.break_wait_start = None;
         self.reminder_stage = 0;
+        self.pre_pause_status = None;
         self.last_tick = Instant::now();
     }
 
@@ -372,6 +392,7 @@ impl TimerEngine {
         self.is_idle = false;
         self.break_wait_start = None;
         self.reminder_stage = 0;
+        self.pre_pause_status = None;
         self.last_tick = Instant::now();
     }
 
@@ -385,6 +406,7 @@ impl TimerEngine {
         self.is_guided_exercise = false;
         self.break_wait_start = None;
         self.reminder_stage = 0;
+        self.pre_pause_status = None;
         self.last_tick = Instant::now();
     }
 
@@ -395,9 +417,10 @@ impl TimerEngine {
     pub fn toggle_pause(&mut self) -> bool {
         self.is_paused = !self.is_paused;
         if self.is_paused {
+            self.pre_pause_status = Some(self.status.clone());
             self.status = TimerStatus::Paused;
         } else {
-            self.status = TimerStatus::Work;
+            self.status = self.pre_pause_status.take().unwrap_or(TimerStatus::Work);
         }
         self.last_tick = Instant::now();
         self.is_paused
@@ -512,6 +535,48 @@ mod tests {
     }
 
     #[test]
+    fn test_toggle_pause_during_break() {
+        let settings = EngineSettings::default();
+        let mut engine = TimerEngine::new(settings);
+        engine.start_break(false);
+        assert_eq!(engine.status, TimerStatus::OnBreak);
+
+        let paused = engine.toggle_pause();
+        assert!(paused);
+        assert!(engine.is_paused);
+        assert_eq!(engine.status, TimerStatus::Paused);
+        assert_eq!(engine.pre_pause_status, Some(TimerStatus::OnBreak));
+
+        let resumed = engine.toggle_pause();
+        assert!(!resumed);
+        assert!(!engine.is_paused);
+        assert_eq!(engine.status, TimerStatus::OnBreak);
+        assert_eq!(engine.pre_pause_status, None);
+    }
+
+    #[test]
+    fn test_persisted_roundtrip_paused_break() {
+        let settings = EngineSettings::default();
+        let mut engine = TimerEngine::new(settings);
+        engine.start_break(false);
+        engine.toggle_pause();
+        assert_eq!(engine.status, TimerStatus::Paused);
+        assert_eq!(engine.pre_pause_status, Some(TimerStatus::OnBreak));
+
+        let persisted = engine.to_persisted();
+        assert_eq!(persisted.status, "paused");
+        assert_eq!(persisted.pre_pause_status, Some("on_break".to_string()));
+
+        let mut engine2 = TimerEngine::new(EngineSettings::default());
+        engine2.hydrate_from_persisted(persisted);
+        assert_eq!(engine2.status, TimerStatus::Paused);
+        assert_eq!(engine2.pre_pause_status, Some(TimerStatus::OnBreak));
+
+        engine2.toggle_pause();
+        assert_eq!(engine2.status, TimerStatus::OnBreak);
+    }
+
+    #[test]
     fn test_break_cycles() {
         let settings = EngineSettings::default();
         let mut engine = TimerEngine::new(settings);
@@ -596,6 +661,7 @@ mod tests {
             is_paused: false,
             is_guided_exercise: false,
             last_saved_epoch: chrono::Utc::now().timestamp() - 40 * 60,
+            pre_pause_status: None,
         };
 
         engine.hydrate_from_persisted(stale_session);
@@ -618,6 +684,7 @@ mod tests {
             is_paused: false,
             is_guided_exercise: false,
             last_saved_epoch: chrono::Utc::now().timestamp() - 10 * 60,
+            pre_pause_status: None,
         };
 
         let event = engine.hydrate_from_persisted(session);

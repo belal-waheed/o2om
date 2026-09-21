@@ -6,8 +6,10 @@ import en from "../locales/en.json";
 export const setLanguage = (lang: string) => {
   const current = lang === "en" ? "en" : "ar";
   i18n.changeLanguage(current);
-  document.documentElement.dir = current === "ar" ? "rtl" : "ltr";
-  document.documentElement.lang = current;
+  if (typeof document !== "undefined") {
+    document.documentElement.dir = current === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = current;
+  }
 };
 
 i18n.use(initReactI18next).init({

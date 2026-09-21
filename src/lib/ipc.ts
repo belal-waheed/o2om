@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
+export type { UnlistenFn };
+
 export type SessionMode = "pomodoro" | "standup" | "eyeguard" | "custom";
 export type TimerStatus = "work" | "waiting_break" | "on_break" | "waiting_work" | "paused" | "idle";
 

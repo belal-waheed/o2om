@@ -38,17 +38,18 @@ pub fn run() {
             // Initialize startup tick for idle monitor (prevents immediate boot freeze)
             IdleMonitor::init();
 
-            let db = DbRepository::new();
-            let settings = db.load_settings();
+            let app_handle = app.handle().clone();
+            let db = tauri::async_runtime::block_on(DbRepository::new(&app_handle));
+            let settings = tauri::async_runtime::block_on(db.load_settings());
             let mut engine = TimerEngine::new(settings);
 
             // Hydrate active session from persistence if present
-            if let Ok(Some(persisted)) = db.load_active_session() {
+            if let Ok(Some(persisted)) = tauri::async_runtime::block_on(db.load_active_session()) {
                 let hydration_event = engine.hydrate_from_persisted(persisted);
                 if hydration_event == crate::core::engine::HydrationEvent::WorkCompletedOffline {
                     let work_interval = engine.settings.work_interval_min;
                     let goal = engine.settings.daily_stand_goal;
-                    let _ = db.add_focus_minutes(work_interval, goal);
+                    let _ = tauri::async_runtime::block_on(db.add_focus_minutes(work_interval, goal));
                 }
             }
 
@@ -56,15 +57,19 @@ pub fn run() {
             let auto_pill = engine.settings.auto_pill_mode;
 
             let initial_goal = engine.settings.daily_stand_goal;
-            let health_summary_cache = db.get_health_stats(initial_goal);
+            let health_summary_cache = tauri::async_runtime::block_on(db.get_health_stats(initial_goal));
             let current_date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
 
-            let app_handle = app.handle().clone();
             if let Err(e) = AutostartService::reconcile(&app_handle, engine.settings.start_with_windows) {
                 eprintln!("[O2om] Autostart reconciliation warning: {}", e);
             }
 
-            let state: SharedState = Arc::new(Mutex::new(AppState { engine, db, health_summary_cache, current_date_str }));
+            let state: SharedState = Arc::new(AppState {
+                engine: Mutex::new(engine),
+                db,
+                health_summary_cache: Mutex::new(health_summary_cache),
+                current_date_str: Mutex::new(current_date_str),
+            });
             app.manage(state.clone());
 
             if is_minimized {
@@ -145,9 +150,10 @@ pub fn run() {
                                     if MOVE_GENERATION.load(std::sync::atomic::Ordering::SeqCst) != current_gen {
                                         return;
                                     }
-                                    let s = state_clone.lock().await;
-                                    let allow = !s.engine.settings.tiling_wm_mode && s.engine.settings.pill_dock_snapping;
-                                    drop(s);
+                                    let allow = {
+                                        let engine = state_clone.engine.lock().await;
+                                        !engine.settings.tiling_wm_mode && engine.settings.pill_dock_snapping
+                                    };
                                     let _ = WindowManager::snap_pill_to_edge(&app_snap, allow);
                                 });
                             }
@@ -167,8 +173,12 @@ pub fn run() {
             app_handle.listen("tray-toggle-pause", move |_| {
                 let state_clone = state_tray_pause.clone();
                 tokio::spawn(async move {
-                    let mut s = state_clone.lock().await;
-                    s.engine.toggle_pause();
+                    let persisted = {
+                        let mut engine = state_clone.engine.lock().await;
+                        engine.toggle_pause();
+                        engine.to_persisted()
+                    };
+                    let _ = state_clone.db.save_active_session(&persisted).await;
                 });
             });
 
@@ -178,8 +188,12 @@ pub fn run() {
                 let state_clone = state_tray_break.clone();
                 let app_clone = app_tray_break.clone();
                 tokio::spawn(async move {
-                    let mut s = state_clone.lock().await;
-                    s.engine.start_break(false);
+                    let persisted = {
+                        let mut engine = state_clone.engine.lock().await;
+                        engine.start_break(false);
+                        engine.to_persisted()
+                    };
+                    let _ = state_clone.db.save_active_session(&persisted).await;
                     WindowManager::restore_to_main(&app_clone);
                     let _ = app_clone.emit("pill-mode-changed", false);
                 });
@@ -199,8 +213,8 @@ pub fn run() {
                 loop {
                     hover_interval.tick().await;
                     let allow_tuck = {
-                        if let Ok(s) = state_hover.try_lock() {
-                            !s.engine.settings.tiling_wm_mode && s.engine.settings.pill_dock_snapping
+                        if let Ok(engine) = state_hover.engine.try_lock() {
+                            !engine.settings.tiling_wm_mode && engine.settings.pill_dock_snapping
                         } else {
                             false
                         }
@@ -222,19 +236,30 @@ pub fn run() {
                     tick_counter = tick_counter.wrapping_add(1);
 
                     let idle_ms = IdleMonitor::get_idle_millis();
-                    let mut app_state = state_tick.lock().await;
-
-                    let work_interval = app_state.engine.settings.work_interval_min;
-                    let goal = app_state.engine.settings.daily_stand_goal;
-                    let sound = app_state.engine.settings.sound_enabled;
-                    let lang = app_state.engine.settings.language.clone();
-
-                    let tick_event = app_state.engine.tick(idle_ms);
+                    let (tick_event, work_interval, goal, sound, lang, snapshot, persisted) = {
+                        let mut engine = state_tick.engine.lock().await;
+                        let event = engine.tick(idle_ms);
+                        let s = engine.get_snapshot();
+                        let p = engine.to_persisted();
+                        (
+                            event,
+                            engine.settings.work_interval_min,
+                            engine.settings.daily_stand_goal,
+                            engine.settings.sound_enabled,
+                            engine.settings.language.clone(),
+                            s,
+                            p,
+                        )
+                    };
 
                     match tick_event {
                         crate::core::engine::TickEvent::WorkCompleted => {
-                            let _ = app_state.db.add_focus_minutes(work_interval, goal);
-                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+                            let _ = state_tick.db.add_focus_minutes(work_interval, goal).await;
+                            let new_summary = state_tick.db.get_health_stats(goal).await;
+                            {
+                                let mut cache = state_tick.health_summary_cache.lock().await;
+                                *cache = new_summary;
+                            }
                             AudioService::play_work_complete(sound);
                             let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
                             let msg = if lang == "ar" {
@@ -249,18 +274,22 @@ pub fn run() {
                             let _ = app_tick.emit("pill-mode-changed", false);
 
                             let _ = app_tick.emit("timer-work-completed", WorkCompletedPayload {
-                                snapshot: app_state.engine.get_snapshot(),
+                                snapshot: snapshot.clone(),
                                 title: title.to_string(),
                                 message: msg.to_string(),
                             });
                         }
                         crate::core::engine::TickEvent::BreakCompleted => {
-                            let break_res = app_state.db.record_completed_break(goal).unwrap_or(crate::db::repository::BreakRecordResult {
+                            let break_res = state_tick.db.record_completed_break(goal).await.unwrap_or(crate::db::repository::BreakRecordResult {
                                 goal_just_met: false,
                                 today_stands: 0,
                                 current_streak_days: 0,
                             });
-                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+                            let new_summary = state_tick.db.get_health_stats(goal).await;
+                            {
+                                let mut cache = state_tick.health_summary_cache.lock().await;
+                                *cache = new_summary;
+                            }
                             AudioService::play_break_complete(sound);
 
                             let title = if lang == "ar" { "قُوم — O2om" } else { "O2om — Stand-Up Reminder" };
@@ -284,7 +313,7 @@ pub fn run() {
                             let _ = app_tick.emit("pill-mode-changed", false);
 
                             let _ = app_tick.emit("timer-break-completed", BreakCompletedPayload {
-                                snapshot: app_state.engine.get_snapshot(),
+                                snapshot: snapshot.clone(),
                                 result: break_res,
                                 title: title.to_string(),
                                 message: msg,
@@ -296,14 +325,15 @@ pub fn run() {
                     // Check for midnight rollover every 60 seconds
                     if tick_counter % 600 == 0 {
                         let now_date = chrono::Local::now().format("%Y-%m-%d").to_string();
-                        if now_date != app_state.current_date_str {
-                            app_state.current_date_str = now_date;
-                            app_state.health_summary_cache = app_state.db.get_health_stats(goal);
+                        let mut cur_date = state_tick.current_date_str.lock().await;
+                        if now_date != *cur_date {
+                            *cur_date = now_date;
+                            drop(cur_date);
+                            let new_summary = state_tick.db.get_health_stats(goal).await;
+                            let mut cache = state_tick.health_summary_cache.lock().await;
+                            *cache = new_summary;
                         }
                     }
-
-                    let snapshot = app_state.engine.get_snapshot();
-                    let health_summary = app_state.health_summary_cache.clone();
 
                     // Update Tray Tooltip
                     let tooltip = format!(
@@ -313,9 +343,14 @@ pub fn run() {
                     TrayManager::update_tooltip(&app_tick, &tooltip);
 
                     // Save active session periodically (every 5 seconds or on transition)
-                    if tick_counter % 5 == 0 || tick_event != crate::core::engine::TickEvent::None {
-                        let _ = app_state.db.save_active_session(&app_state.engine.to_persisted());
+                    if tick_counter % 50 == 0 || tick_event != crate::core::engine::TickEvent::None {
+                        let _ = state_tick.db.save_active_session(&persisted).await;
                     }
+
+                    let health_summary = {
+                        let cache = state_tick.health_summary_cache.lock().await;
+                        cache.clone()
+                    };
 
                     // Broadcast tick payload
                     let _ = app_tick.emit("timer-tick", TimerTickPayload {
