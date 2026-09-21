@@ -15,7 +15,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
-import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import type { EngineSettings } from "../../lib/ipc";
 
 export const SettingsView: React.FC = () => {
@@ -89,17 +88,6 @@ export const SettingsView: React.FC = () => {
       cycles_before_long: Math.max(1, Math.min(12, Number(formData.cycles_before_long) || 4)),
       daily_stand_goal: Math.max(1, Math.min(24, Number(formData.daily_stand_goal) || 8)),
     };
-
-    // Autostart Plugin Sync
-    try {
-      if (sanitized.start_with_windows) {
-        if (!(await isEnabled())) await enable();
-      } else {
-        if (await isEnabled()) await disable();
-      }
-    } catch (e) {
-      console.warn("Autostart sync warning:", e);
-    }
 
     try {
       await saveSettings(sanitized);

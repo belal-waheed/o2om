@@ -1,6 +1,6 @@
 [package]
 name = "o2om"
-version = "4.0.3"
+version = "4.1.0"
 description = "O2om - Ergonomic Stand-Up & Focus Health Companion"
 authors = ["O2om Team"]
 edition = "2021"

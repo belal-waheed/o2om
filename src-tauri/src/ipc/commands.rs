@@ -104,6 +104,7 @@ pub async fn get_settings(state: State<'_, SharedState>) -> Result<EngineSetting
 
 #[tauri::command]
 pub async fn save_settings(
+    app: AppHandle,
     settings: EngineSettings,
     state: State<'_, SharedState>,
 ) -> Result<TimerStateSnapshot, String> {
@@ -119,6 +120,8 @@ pub async fn save_settings(
         eprintln!("Failed to save settings: {}", e);
         return Err(format!("Failed to save settings to database: {}", e));
     }
+
+    let _ = crate::reconcile_autostart(&app, settings.start_with_windows);
 
     if goal_changed {
         app_state.health_summary_cache = app_state.db.get_health_stats(settings.daily_stand_goal);
