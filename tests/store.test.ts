@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import ar from "../src/locales/ar.json";
 import en from "../src/locales/en.json";
 
-describe("O2om v4.0 Frontend & Localization Tests", () => {
+describe("O2om v4.2.0 Frontend & Localization Tests", () => {
   it("should have matching translation keys between Arabic and English", () => {
     const arKeys = Object.keys(ar).sort();
     const enKeys = Object.keys(en).sort();
