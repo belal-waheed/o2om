@@ -118,15 +118,6 @@ impl DbRepository {
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE IF NOT EXISTS session_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_type TEXT NOT NULL,
-                duration_seconds INTEGER NOT NULL,
-                started_at DATETIME NOT NULL,
-                completed_at DATETIME NOT NULL,
-                was_skipped INTEGER DEFAULT 0
-            );
-
             CREATE TABLE IF NOT EXISTS streaks_metadata (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 current_streak_days INTEGER DEFAULT 0,
@@ -210,11 +201,6 @@ impl DbRepository {
                             settings.cycles_before_long = v;
                         }
                     }
-                    "escalation_min" => {
-                        if let Ok(v) = val.parse() {
-                            settings.escalation_min = v;
-                        }
-                    }
                     "snooze_min" => {
                         if let Ok(v) = val.parse() {
                             settings.snooze_min = v;
@@ -270,7 +256,6 @@ impl DbRepository {
                 ("short_break_min", settings.short_break_min.to_string()),
                 ("long_break_min", settings.long_break_min.to_string()),
                 ("cycles_before_long", settings.cycles_before_long.to_string()),
-                ("escalation_min", settings.escalation_min.to_string()),
                 ("snooze_min", settings.snooze_min.to_string()),
                 ("idle_threshold_min", settings.idle_threshold_min.to_string()),
                 ("eye_work_min", settings.eye_work_min.to_string()),
@@ -549,7 +534,6 @@ impl DbRepository {
             conn.execute_batch(
                 "
                 DELETE FROM daily_health_records;
-                DELETE FROM session_logs;
                 UPDATE streaks_metadata SET current_streak_days = 0, best_streak_days = 0, last_active_date = '';
                 ",
             )?;

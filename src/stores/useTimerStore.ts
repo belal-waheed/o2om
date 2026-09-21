@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import toast from "react-hot-toast";
 import {
   tauriApi,
   type DockInfo,
@@ -56,6 +57,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ isPillMode: isPill, dockInfo: isPill ? get().dockInfo : null });
     } catch (e) {
       console.error("Failed to set pill mode:", e);
+      toast.error(String(e || "Failed to set pill mode"));
       set({ isPillMode: isPill });
     }
   },
@@ -66,6 +68,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ dockInfo: info });
     } catch (e) {
       console.error("Failed to set pill tucked:", e);
+      toast.error(String(e || "Failed to set pill tucked"));
     }
   },
 
@@ -179,6 +182,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set((state) => ({ unlisteners: [...state.unlisteners, ...newUnlisteners] }));
     } catch (err) {
       console.error("Failed to initialize timer store:", err);
+      toast.error("Failed to initialize timer");
       for (const unlisten of newUnlisteners) {
         try {
           unlisten();
@@ -196,6 +200,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to start work"));
     }
   },
 
@@ -205,6 +210,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to start break"));
     }
   },
 
@@ -214,6 +220,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to skip break"));
     }
   },
 
@@ -224,6 +231,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to toggle pause"));
     }
   },
 
@@ -233,6 +241,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to reset timer"));
     }
   },
 
@@ -242,6 +251,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to snooze timer"));
     }
   },
 
@@ -252,6 +262,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap, settings: updatedSettings });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to change mode"));
     }
   },
 
@@ -264,6 +275,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ snapshot: snap, settings: newSettings });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to save settings"));
       throw e;
     }
   },
@@ -274,6 +286,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       set({ healthSummary: stats });
     } catch (e) {
       console.error(e);
+      toast.error(String(e || "Failed to refresh stats"));
     }
   },
 
@@ -284,6 +297,7 @@ export const useTimerStore = create<TimerStoreState>((set, get) => ({
       await get().resetTimer();
     } catch (e) {
       console.error("Failed to reset stats:", e);
+      toast.error(String(e || "Failed to reset stats"));
       throw e;
     }
   },

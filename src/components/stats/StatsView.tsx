@@ -58,7 +58,7 @@ export const StatsView: React.FC = () => {
           </div>
           <div>
             <div className="text-[11px] text-[#94A3B8] font-medium">{t("stats_today_stands")}</div>
-            <div className="text-base font-bold text-[#F1F5F9] font-mono">
+            <div className="text-base font-bold text-[#F1F5F9] font-mono select-text">
               {todayStands} <span className="text-xs text-[#64748B]">/ {goal}</span>
             </div>
           </div>
@@ -71,7 +71,7 @@ export const StatsView: React.FC = () => {
           </div>
           <div>
             <div className="text-[11px] text-[#94A3B8] font-medium">{t("stats_focus_today")}</div>
-            <div className="text-base font-bold text-[#F1F5F9] font-mono">
+            <div className="text-base font-bold text-[#F1F5F9] font-mono select-text">
               {formatMins(todayFocus)}
             </div>
           </div>
@@ -84,7 +84,7 @@ export const StatsView: React.FC = () => {
           </div>
           <div>
             <div className="text-[11px] text-[#94A3B8] font-medium">{t("stats_current_streak")}</div>
-            <div className="text-base font-bold text-[#F59E0B] font-mono">
+            <div className="text-base font-bold text-[#F59E0B] font-mono select-text">
               {currentStreak} <span className="text-xs text-[#64748B] font-sans">{daysUnit}</span>
             </div>
           </div>
@@ -97,7 +97,7 @@ export const StatsView: React.FC = () => {
           </div>
           <div>
             <div className="text-[11px] text-[#94A3B8] font-medium">{t("stats_best_streak")}</div>
-            <div className="text-base font-bold text-[#F1F5F9] font-mono">
+            <div className="text-base font-bold text-[#F1F5F9] font-mono select-text">
               {bestStreak} <span className="text-xs text-[#64748B] font-sans">{daysUnit}</span>
             </div>
           </div>
@@ -108,12 +108,12 @@ export const StatsView: React.FC = () => {
       <div className="p-3 bg-[#161822] border border-[#2A3048] rounded-xl flex justify-around">
         <div className="text-center">
           <div className="text-[11px] text-[#94A3B8]">{t("stats_total_stands")}</div>
-          <div className="text-sm font-bold text-[#F1F5F9] font-mono mt-0.5">{totalStands}</div>
+          <div className="text-sm font-bold text-[#F1F5F9] font-mono mt-0.5 select-text">{totalStands}</div>
         </div>
         <div className="w-[1px] bg-[#2A3048]" />
         <div className="text-center">
           <div className="text-[11px] text-[#94A3B8]">{t("stats_total_focus")}</div>
-          <div className="text-sm font-bold text-[#F1F5F9] font-mono mt-0.5">{formatMins(totalFocus)}</div>
+          <div className="text-sm font-bold text-[#F1F5F9] font-mono mt-0.5 select-text">{formatMins(totalFocus)}</div>
         </div>
       </div>
 

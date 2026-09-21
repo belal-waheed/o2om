@@ -64,7 +64,6 @@ pub async fn skip_break(state: State<'_, SharedState>, app: AppHandle) -> Result
     };
     let _ = state.db.save_active_session(&persisted).await;
     WindowManager::hide_break_overlay(&app);
-    WindowManager::show_main(&app);
     Ok(snapshot)
 }
 

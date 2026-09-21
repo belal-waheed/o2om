@@ -48,7 +48,6 @@ export const SettingsView: React.FC = () => {
     short_break_min: 5,
     long_break_min: 15,
     cycles_before_long: 4,
-    escalation_min: 2,
     snooze_min: 5,
     idle_threshold_min: 5,
     eye_work_min: 20,
@@ -62,12 +61,27 @@ export const SettingsView: React.FC = () => {
     auto_pill_mode: true,
   });
 
+  const [inputStrings, setInputStrings] = useState<Record<string, string>>({
+    work_interval_min: "25",
+    short_break_min: "5",
+    long_break_min: "15",
+    cycles_before_long: "4",
+    daily_stand_goal: "8",
+  });
+
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) {
       setFormData(settings);
+      setInputStrings({
+        work_interval_min: String(settings.work_interval_min),
+        short_break_min: String(settings.short_break_min),
+        long_break_min: String(settings.long_break_min),
+        cycles_before_long: String(settings.cycles_before_long),
+        daily_stand_goal: String(settings.daily_stand_goal),
+      });
     }
   }, [settings]);
 
@@ -76,17 +90,39 @@ export const SettingsView: React.FC = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleNumericInputChange = (field: string, val: string) => {
+    setInputStrings((prev) => ({ ...prev, [field]: val }));
+  };
+
+  const handleNumericInputBlur = (
+    field: keyof EngineSettings,
+    min: number,
+    max: number,
+    defaultVal: number
+  ) => {
+    const raw = inputStrings[field as string];
+    const parsed = parseInt(raw, 10);
+    const clamped = isNaN(parsed) ? defaultVal : Math.max(min, Math.min(max, parsed));
+    setInputStrings((prev) => ({ ...prev, [field as string]: String(clamped) }));
+    updateField(field, clamped as never);
+  };
+
   const handleSave = async () => {
     setErrorMessage(null);
+
+    const parseField = (field: string, min: number, max: number, fallback: number) => {
+      const parsed = parseInt(inputStrings[field], 10);
+      return isNaN(parsed) ? fallback : Math.max(min, Math.min(max, parsed));
+    };
 
     // Clamping & Bounds Validation
     const sanitized: EngineSettings = {
       ...formData,
-      work_interval_min: Math.max(1, Math.min(180, Number(formData.work_interval_min) || 25)),
-      short_break_min: Math.max(1, Math.min(60, Number(formData.short_break_min) || 5)),
-      long_break_min: Math.max(1, Math.min(90, Number(formData.long_break_min) || 15)),
-      cycles_before_long: Math.max(1, Math.min(12, Number(formData.cycles_before_long) || 4)),
-      daily_stand_goal: Math.max(1, Math.min(24, Number(formData.daily_stand_goal) || 8)),
+      work_interval_min: parseField("work_interval_min", 1, 180, 25),
+      short_break_min: parseField("short_break_min", 1, 60, 5),
+      long_break_min: parseField("long_break_min", 1, 90, 15),
+      cycles_before_long: parseField("cycles_before_long", 1, 12, 4),
+      daily_stand_goal: parseField("daily_stand_goal", 1, 24, 8),
     };
 
     try {
@@ -134,11 +170,11 @@ export const SettingsView: React.FC = () => {
               {t("lbl_work_min")}
             </label>
             <input
-              type="number"
-              min={1}
-              max={180}
-              value={formData.work_interval_min}
-              onChange={(e) => updateField("work_interval_min", parseInt(e.target.value) || 1)}
+              type="text"
+              inputMode="numeric"
+              value={inputStrings.work_interval_min}
+              onChange={(e) => handleNumericInputChange("work_interval_min", e.target.value)}
+              onBlur={() => handleNumericInputBlur("work_interval_min", 1, 180, 25)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -148,11 +184,11 @@ export const SettingsView: React.FC = () => {
               {t("lbl_short_break_min")}
             </label>
             <input
-              type="number"
-              min={1}
-              max={60}
-              value={formData.short_break_min}
-              onChange={(e) => updateField("short_break_min", parseInt(e.target.value) || 1)}
+              type="text"
+              inputMode="numeric"
+              value={inputStrings.short_break_min}
+              onChange={(e) => handleNumericInputChange("short_break_min", e.target.value)}
+              onBlur={() => handleNumericInputBlur("short_break_min", 1, 60, 5)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -162,11 +198,11 @@ export const SettingsView: React.FC = () => {
               {t("lbl_long_break_min")}
             </label>
             <input
-              type="number"
-              min={1}
-              max={90}
-              value={formData.long_break_min}
-              onChange={(e) => updateField("long_break_min", parseInt(e.target.value) || 1)}
+              type="text"
+              inputMode="numeric"
+              value={inputStrings.long_break_min}
+              onChange={(e) => handleNumericInputChange("long_break_min", e.target.value)}
+              onBlur={() => handleNumericInputBlur("long_break_min", 1, 90, 15)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -176,11 +212,11 @@ export const SettingsView: React.FC = () => {
               {t("lbl_cycles")}
             </label>
             <input
-              type="number"
-              min={1}
-              max={12}
-              value={formData.cycles_before_long}
-              onChange={(e) => updateField("cycles_before_long", parseInt(e.target.value) || 1)}
+              type="text"
+              inputMode="numeric"
+              value={inputStrings.cycles_before_long}
+              onChange={(e) => handleNumericInputChange("cycles_before_long", e.target.value)}
+              onBlur={() => handleNumericInputBlur("cycles_before_long", 1, 12, 4)}
               className="w-full bg-[#1F2333] border border-[#2A3048] rounded-lg py-1.5 px-3 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
             />
           </div>
@@ -194,11 +230,11 @@ export const SettingsView: React.FC = () => {
           <span>{t("lbl_daily_goal")}</span>
         </div>
         <input
-          type="number"
-          min={1}
-          max={24}
-          value={formData.daily_stand_goal}
-          onChange={(e) => updateField("daily_stand_goal", parseInt(e.target.value) || 8)}
+          type="text"
+          inputMode="numeric"
+          value={inputStrings.daily_stand_goal}
+          onChange={(e) => handleNumericInputChange("daily_stand_goal", e.target.value)}
+          onBlur={() => handleNumericInputBlur("daily_stand_goal", 1, 24, 8)}
           className="w-16 bg-[#1F2333] border border-[#2A3048] rounded-lg py-1 px-2 text-xs text-center font-mono font-bold text-[#F1F5F9] focus:border-[#6366F1] outline-none"
         />
       </div>

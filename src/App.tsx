@@ -9,13 +9,15 @@ export const App: React.FC = () => {
 
   const params = new URLSearchParams(window.location.search);
   const win = params.get("win");
-  const targetWin = (win as "pill" | "break_overlay") || "main";
+  const targetWin: "main" | "pill" | "break_overlay" = ["pill", "break_overlay"].includes(win || "")
+    ? (win as "pill" | "break_overlay")
+    : "main";
 
   useEffect(() => {
     initStore(targetWin);
   }, [initStore, targetWin]);
 
-  if (win === "pill") {
+  if (targetWin === "pill") {
     return (
       <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
         <MiniPillView />
@@ -23,7 +25,7 @@ export const App: React.FC = () => {
     );
   }
 
-  if (win === "break_overlay") {
+  if (targetWin === "break_overlay") {
     return (
       <div className="w-screen h-screen overflow-hidden bg-[#0D0E15] select-none p-2">
         <GuidedBreakView />

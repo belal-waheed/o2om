@@ -1,35 +1,66 @@
 use rodio::{buffer::SamplesBuffer, OutputStream, Sink};
+use std::sync::mpsc::{sync_channel, SyncSender};
+use std::sync::OnceLock;
+
+struct ChimeRequest {
+    freq1: f32,
+    freq2: f32,
+    duration_sec: f32,
+}
+
+static AUDIO_TX: OnceLock<SyncSender<ChimeRequest>> = OnceLock::new();
+
+fn get_audio_sender() -> Option<&'static SyncSender<ChimeRequest>> {
+    AUDIO_TX.get_or_init(|| {
+        let (tx, rx) = sync_channel::<ChimeRequest>(16);
+        let _ = std::thread::Builder::new()
+            .name("o2om-audio-worker".to_string())
+            .spawn(move || {
+                let Ok((_stream, stream_handle)) = OutputStream::try_default() else {
+                    eprintln!("[O2om Audio] Failed to initialize default audio output stream");
+                    return;
+                };
+
+                while let Ok(req) = rx.recv() {
+                    let Ok(sink) = Sink::try_new(&stream_handle) else {
+                        continue;
+                    };
+
+                    let sample_rate = 44100;
+                    let total_samples = (sample_rate as f32 * req.duration_sec) as usize;
+                    let mut samples = Vec::with_capacity(total_samples);
+
+                    for i in 0..total_samples {
+                        let t = i as f32 / sample_rate as f32;
+                        // Soft exponential decay envelope for a calm bell resonance
+                        let envelope = (-3.0 * t / req.duration_sec).exp();
+                        let wave1 = (2.0 * std::f32::consts::PI * req.freq1 * t).sin();
+                        let wave2 = (2.0 * std::f32::consts::PI * req.freq2 * t).sin();
+                        let sample = (wave1 * 0.65 + wave2 * 0.35) * envelope * 0.3;
+                        samples.push(sample);
+                    }
+
+                    let buffer = SamplesBuffer::new(1, sample_rate, samples);
+                    sink.append(buffer);
+                    sink.sleep_until_end();
+                }
+            });
+        tx
+    });
+    AUDIO_TX.get()
+}
 
 pub struct AudioService;
 
 impl AudioService {
     fn play_chime(freq1: f32, freq2: f32, duration_sec: f32) {
-        std::thread::spawn(move || {
-            let Ok((_stream, stream_handle)) = OutputStream::try_default() else {
-                return;
-            };
-            let Ok(sink) = Sink::try_new(&stream_handle) else {
-                return;
-            };
-
-            let sample_rate = 44100;
-            let total_samples = (sample_rate as f32 * duration_sec) as usize;
-            let mut samples = Vec::with_capacity(total_samples);
-
-            for i in 0..total_samples {
-                let t = i as f32 / sample_rate as f32;
-                // Soft exponential decay envelope for a calm bell resonance
-                let envelope = (-3.0 * t / duration_sec).exp();
-                let wave1 = (2.0 * std::f32::consts::PI * freq1 * t).sin();
-                let wave2 = (2.0 * std::f32::consts::PI * freq2 * t).sin();
-                let sample = (wave1 * 0.65 + wave2 * 0.35) * envelope * 0.3;
-                samples.push(sample);
-            }
-
-            let buffer = SamplesBuffer::new(1, sample_rate, samples);
-            sink.append(buffer);
-            sink.sleep_until_end();
-        });
+        if let Some(sender) = get_audio_sender() {
+            let _ = sender.try_send(ChimeRequest {
+                freq1,
+                freq2,
+                duration_sec,
+            });
+        }
     }
 
     pub fn play_work_complete(enabled: bool) {

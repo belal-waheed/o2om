@@ -44,6 +44,11 @@ body {
   letter-spacing: -0.02em;
 }
 
+.select-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 /* Custom subtle scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

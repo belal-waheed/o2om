@@ -35,7 +35,6 @@ pub struct EngineSettings {
     pub short_break_min: u32,
     pub long_break_min: u32,
     pub cycles_before_long: u32,
-    pub escalation_min: u32,
     pub snooze_min: u32,
     pub idle_threshold_min: u32,
     pub eye_work_min: u32,
@@ -57,7 +56,6 @@ impl Default for EngineSettings {
             short_break_min: 5,
             long_break_min: 15,
             cycles_before_long: 4,
-            escalation_min: 2,
             snooze_min: 5,
             idle_threshold_min: 5,
             eye_work_min: 20,
@@ -161,11 +159,6 @@ impl TimerEngine {
 
     pub fn snooze_ms(&self) -> u64 {
         (self.settings.snooze_min.max(1) as u64) * 60 * 1000
-    }
-
-    #[allow(dead_code)]
-    pub fn escalation_ms(&self) -> u64 {
-        (self.settings.escalation_min.max(1) as u64) * 60 * 1000
     }
 
     pub fn idle_threshold_ms(&self) -> u64 {
@@ -459,7 +452,11 @@ impl TimerEngine {
 
         // 3. Physical Inactivity Detection during active work countdown
         if self.status == TimerStatus::Work {
-            if physical_idle_ms >= self.idle_threshold_ms() {
+            if physical_idle_ms >= 2 * self.idle_threshold_ms() {
+                self.reset_to_work();
+                self.is_idle = true;
+                return TickEvent::None;
+            } else if physical_idle_ms >= self.idle_threshold_ms() {
                 self.is_idle = true;
                 return TickEvent::None;
             } else {
@@ -713,5 +710,33 @@ mod tests {
             assert_eq!(engine.status, TimerStatus::WaitingBreak);
             assert_eq!(engine.remaining_ms, 0);
         }
+    }
+
+    #[test]
+    fn test_extended_idle_auto_reset() {
+        let settings = EngineSettings {
+            work_interval_min: 25,
+            idle_threshold_min: 5,
+            ..Default::default()
+        };
+        let mut engine = TimerEngine::new(settings);
+
+        // Advance timer so some time has elapsed
+        engine.remaining_ms = 15 * 60 * 1000;
+        engine.last_tick = Instant::now() - std::time::Duration::from_millis(100);
+
+        // Below 2x threshold (e.g. 6 min idle) -> pauses countdown, sets is_idle
+        let event = engine.tick(6 * 60 * 1000);
+        assert_eq!(event, TickEvent::None);
+        assert_eq!(engine.status, TimerStatus::Work);
+        assert_eq!(engine.remaining_ms, 15 * 60 * 1000);
+        assert!(engine.is_idle);
+
+        // At or above 2x threshold (10 min idle >= 2 * 5 min) -> auto-resets to full work duration
+        let event = engine.tick(10 * 60 * 1000);
+        assert_eq!(event, TickEvent::None);
+        assert_eq!(engine.status, TimerStatus::Work);
+        assert_eq!(engine.remaining_ms, 25 * 60 * 1000);
+        assert!(engine.is_idle);
     }
 }

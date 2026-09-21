@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { Play, Pause, Maximize2, GripVertical } from "lucide-react";
 import { useTimerStore } from "../../stores/useTimerStore";
@@ -7,7 +7,6 @@ import { cn } from "../../lib/utils";
 export const MiniPillView: React.FC = () => {
   const { t } = useTranslation();
   const { snapshot, togglePause, setPillMode, dockInfo, setPillTucked } = useTimerStore();
-  const [isHovered, setIsHovered] = useState<boolean>(false);
 
   const isPaused = snapshot?.is_paused || false;
   const isBreak = snapshot?.status === "on_break";
@@ -62,12 +61,7 @@ export const MiniPillView: React.FC = () => {
   return (
     <div
       data-tauri-drag-region
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={cn(
-        "flex items-center justify-between w-full h-full px-2 bg-[#0D0E15] border border-[#2A3048] rounded-xl select-none cursor-move shadow-2xl transition-colors duration-150",
-        isHovered && "border-[#6366F1]/60 bg-[#12141F]"
-      )}
+      className="flex items-center justify-between w-full h-full px-2 bg-[#0D0E15] hover:bg-[#12141F] border border-[#2A3048] hover:border-[#6366F1]/60 rounded-xl select-none cursor-move shadow-2xl transition-colors duration-150"
     >
       {/* Drag Grip & Status Dot */}
       <div className="flex items-center gap-1.5" data-tauri-drag-region>

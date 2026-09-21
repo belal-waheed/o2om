@@ -12,7 +12,6 @@ export interface EngineSettings {
   short_break_min: number;
   long_break_min: number;
   cycles_before_long: number;
-  escalation_min: number;
   snooze_min: number;
   idle_threshold_min: number;
   eye_work_min: number;

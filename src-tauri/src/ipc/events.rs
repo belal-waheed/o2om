@@ -23,14 +23,6 @@ pub struct BreakCompletedPayload {
     pub message: String,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EscalationPayload {
-    pub stage: u32,
-    pub title: String,
-    pub message: String,
-}
-
 pub fn emit_health_summary(app: &tauri::AppHandle, summary: &HealthStatsSummary) -> Result<(), tauri::Error> {
     use tauri::Emitter;
     app.emit("health-summary-updated", summary)

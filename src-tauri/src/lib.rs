@@ -72,19 +72,7 @@ pub fn run() {
             });
             app.manage(state.clone());
 
-            if is_minimized {
-                if let Some(main_window) = app.get_webview_window("main") {
-                    let _ = main_window.hide();
-                }
-                if auto_pill {
-                    let app_init = app_handle.clone();
-                    tauri::async_runtime::spawn(async move {
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                        WindowManager::set_pill_mode(&app_init, true);
-                        let _ = app_init.emit("pill-mode-changed", true);
-                    });
-                }
-            } else if auto_pill {
+            if auto_pill {
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.hide();
                 }
@@ -94,6 +82,10 @@ pub fn run() {
                     WindowManager::set_pill_mode(&app_init, true);
                     let _ = app_init.emit("pill-mode-changed", true);
                 });
+            } else if is_minimized {
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.hide();
+                }
             } else {
                 WindowManager::show_main(&app_handle);
             }
@@ -136,8 +128,8 @@ pub fn run() {
                             api.prevent_close();
                             let _ = win_clone.hide();
                         }
-                        tauri::WindowEvent::Moved(_) => {
-                            if WindowManager::is_programmatic_move() {
+                        tauri::WindowEvent::Moved(pos) => {
+                            if WindowManager::is_at_dock_position(&pos) {
                                 return;
                             }
                             WindowManager::on_user_move();

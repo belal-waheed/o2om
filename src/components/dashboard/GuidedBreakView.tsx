@@ -125,7 +125,7 @@ export const GuidedBreakView: React.FC = () => {
             (e.target as HTMLElement).style.display = "none";
           }}
         />
-        <div className="absolute top-2 right-2 bg-[#0D0E15]/90 backdrop-blur-sm px-2 py-0.5 rounded-md border border-[#2A3048] flex items-center gap-1.5">
+        <div className="absolute top-2 end-2 bg-[#0D0E15]/90 backdrop-blur-sm px-2 py-0.5 rounded-md border border-[#2A3048] flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
           <span className="text-[11px] font-bold text-[#F1F5F9]">
             {currentStep ? (isAr ? currentStep.name_ar : currentStep.name_en) : ""}

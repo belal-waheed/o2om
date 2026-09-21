@@ -72,7 +72,6 @@ describe("useTimerStore listener registration and cleanup (C3, H2)", () => {
       short_break_min: 5,
       long_break_min: 15,
       cycles_before_long: 4,
-      escalation_min: 2,
       snooze_min: 5,
       idle_threshold_min: 5,
       eye_work_min: 20,

@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Toaster } from "react-hot-toast";
 import { Timer, BarChart3, Settings } from "lucide-react";
 import { useTimerStore } from "../stores/useTimerStore";
 import { cn } from "../lib/utils";
@@ -84,6 +85,25 @@ export const MainWindow: React.FC = () => {
 
         {activeTab === "settings" && <SettingsView />}
       </div>
+
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: "#161822",
+            color: "#F1F5F9",
+            border: "1px solid #2A3048",
+            fontSize: "12px",
+            borderRadius: "10px",
+          },
+          error: {
+            iconTheme: {
+              primary: "#EF4444",
+              secondary: "#161822",
+            },
+          },
+        }}
+      />
     </div>
   );
 };

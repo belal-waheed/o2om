@@ -31,7 +31,6 @@ struct StoredDockState {
 
 static CURRENT_DOCK: RwLock<Option<StoredDockState>> = RwLock::new(None);
 static IS_PILL: AtomicBool = AtomicBool::new(false);
-static IS_PROGRAMMATIC_MOVE: AtomicBool = AtomicBool::new(false);
 
 pub struct WindowManager;
 
@@ -44,8 +43,15 @@ impl WindowManager {
         IS_PILL.load(Ordering::SeqCst)
     }
 
-    pub fn is_programmatic_move() -> bool {
-        IS_PROGRAMMATIC_MOVE.swap(false, Ordering::SeqCst)
+    pub fn is_at_dock_position(pos: &PhysicalPosition<i32>) -> bool {
+        let lock = CURRENT_DOCK.read().unwrap_or_else(|e| e.into_inner());
+        if let Some(ref state) = *lock {
+            let normal_match = (pos.x - state.normal_pos.x).abs() <= 3 && (pos.y - state.normal_pos.y).abs() <= 3;
+            let tucked_match = (pos.x - state.tucked_pos.x).abs() <= 3 && (pos.y - state.tucked_pos.y).abs() <= 3;
+            normal_match || tucked_match
+        } else {
+            false
+        }
     }
 
     pub fn on_user_move() {
@@ -149,9 +155,6 @@ impl WindowManager {
                     let normal_pos = PhysicalPosition { x: normal_x, y: normal_y };
                     let tucked_pos = PhysicalPosition { x: tucked_x, y: tucked_y };
 
-                    IS_PROGRAMMATIC_MOVE.store(true, Ordering::SeqCst);
-                    let _ = pill_win.set_position(Position::Physical(normal_pos));
-
                     *CURRENT_DOCK.write().unwrap_or_else(|e| e.into_inner()) = Some(StoredDockState {
                         edge: "left".to_string(),
                         normal_pos,
@@ -159,6 +162,8 @@ impl WindowManager {
                         is_tucked: false,
                         last_hovered: Instant::now(),
                     });
+
+                    let _ = pill_win.set_position(Position::Physical(normal_pos));
 
                     let _ = app.emit(
                         "pill-dock-changed",
@@ -314,12 +319,6 @@ impl WindowManager {
                 y: tucked_y,
             };
 
-            // Only move if actually shifted
-            if (win_pos.x - normal_x).abs() > 1 || (win_pos.y - normal_y).abs() > 1 {
-                IS_PROGRAMMATIC_MOVE.store(true, Ordering::SeqCst);
-                let _ = win.set_position(Position::Physical(normal_pos));
-            }
-
             *CURRENT_DOCK.write().unwrap_or_else(|e| e.into_inner()) = Some(StoredDockState {
                 edge: edge.to_string(),
                 normal_pos,
@@ -327,6 +326,11 @@ impl WindowManager {
                 is_tucked: false,
                 last_hovered: Instant::now(),
             });
+
+            // Only move if actually shifted
+            if (win_pos.x - normal_x).abs() > 1 || (win_pos.y - normal_y).abs() > 1 {
+                let _ = win.set_position(Position::Physical(normal_pos));
+            }
 
             let dock_info = DockInfo {
                 is_docked: true,
@@ -359,7 +363,6 @@ impl WindowManager {
                 } else {
                     state.normal_pos
                 };
-                IS_PROGRAMMATIC_MOVE.store(true, Ordering::SeqCst);
                 let _ = win.set_position(Position::Physical(target_pos));
             }
             if !tucked {
@@ -433,7 +436,6 @@ impl WindowManager {
                     state.last_hovered = Instant::now();
                     if state.is_tucked {
                         state.is_tucked = false;
-                        IS_PROGRAMMATIC_MOVE.store(true, Ordering::SeqCst);
                         let _ = win.set_position(Position::Physical(state.normal_pos));
                         let dock_info = DockInfo {
                             is_docked: true,
@@ -446,7 +448,6 @@ impl WindowManager {
                     // Hide / tuck after 650ms of mouse leaving the area
                     if state.last_hovered.elapsed().as_millis() > 650 {
                         state.is_tucked = true;
-                        IS_PROGRAMMATIC_MOVE.store(true, Ordering::SeqCst);
                         let _ = win.set_position(Position::Physical(state.tucked_pos));
                         let dock_info = DockInfo {
                             is_docked: true,
