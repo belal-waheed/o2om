@@ -5,19 +5,19 @@
 ## Technical Specifications
 
 - Project Name: O2om (قُوم)
-- Latest Release: v4.0.3
+- Latest Release: v4.2.0
 - Target Operating System: Windows 10 (1809+) & Windows 11 (64-bit x64)
 - Desktop Runtime: Tauri v2.2+ (tauri, tauri-plugin-notification, tauri-plugin-autostart, tauri-plugin-single-instance)
-- Backend Stack: Rust 2021 (tokio 100ms interval, rusqlite with WAL mode and in-memory mutex, windows-rs Win32 API, rodio synthesized audio)
+- Backend Stack: Rust 2021 (tokio 100ms interval, tokio-rusqlite asynchronous connection with decoupled AppState mutex locks, windows-rs Win32 API, persistent rodio synthesized audio thread)
 - Frontend Stack: React 19, TypeScript 5.7, Vite 6, Tailwind CSS v4, Zustand 5, Lucide React, i18next
 - Process Model: Single-instance enforced (secondary launches focus the existing main window)
 - Window Topology:
   - main: 420x490px dashboard, analytics, and configuration (hides to tray on close)
-  - pill: 176x42px frameless floating micro-timer with Win32 WS_EX_TOOLWINDOW taskbar isolation and edge-snapping
+  - pill: 176x42px frameless floating micro-timer with Win32 WS_EX_TOOLWINDOW taskbar isolation and coordinate dock matching
   - break_overlay: 720x520px centered, always-on-top guided 5-step ergonomics stretch coach
 - Tiling Window Manager Support: GlazeWM & Komorebi compatible (tiling_wm_mode setting disables edge-snapping)
 - Physical Inactivity Detection: Win32 GetLastInputInfo physical idle detection (pauses work countdowns, never interrupts active breaks)
-- Persistence Layer: SQLite in %APPDATA%\com.o2om.desktop\o2om.db with transactional integrity and auto-migration
+- Persistence Layer: Asynchronous SQLite via tokio-rusqlite in %APPDATA%\com.o2om.desktop\o2om.db with transactional integrity and auto-migration
 - Runtime Footprint: ~30MB RAM, 0% idle CPU, no Electron or Chromium background bloat
 - License: MIT License
 
@@ -70,7 +70,7 @@ Tables:
 
 ## Distribution & Installer Binaries
 
-- Recommended Windows Setup: `dist-setup/o2om-setup.exe` (NSIS setup with pre-install auto-kill hook)
-- Archive NSIS: `dist-setup/O2om_4.0.3_x64-setup.exe`
-- Enterprise Windows Installer: `dist-setup/O2om_4.0.3_x64_en-US.msi` (MSI for GPO / Intune)
+- Recommended Windows Setup: `https://github.com/belal-waheed/o2om/releases/download/v4.2.0/o2om-setup.exe` (NSIS setup with pre-install auto-kill hook)
+- Versioned NSIS: `https://github.com/belal-waheed/o2om/releases/download/v4.2.0/O2om_4.2.0_x64-setup.exe`
+- Enterprise Windows Installer: `https://github.com/belal-waheed/o2om/releases/download/v4.2.0/O2om_4.2.0_x64_en-US.msi` (MSI for GPO / Intune)
 - Repository: `https://github.com/belal-waheed/o2om`
