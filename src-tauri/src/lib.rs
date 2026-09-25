@@ -31,7 +31,7 @@ pub fn run() {
             Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let _ = crate::ui::windows::WindowManager::set_pill_mode(app, false);
+            crate::ui::windows::WindowManager::set_pill_mode(app, false);
             crate::ui::windows::WindowManager::show_main(app);
         }))
         .setup(|app| {
@@ -129,7 +129,7 @@ pub fn run() {
                             let _ = win_clone.hide();
                         }
                         tauri::WindowEvent::Moved(pos) => {
-                            if WindowManager::is_at_dock_position(&pos) {
+                            if WindowManager::is_at_dock_position(pos) {
                                 return;
                             }
                             WindowManager::on_user_move();
@@ -315,7 +315,7 @@ pub fn run() {
                     }
 
                     // Check for midnight rollover every 60 seconds
-                    if tick_counter % 600 == 0 {
+                    if tick_counter.is_multiple_of(600) {
                         let now_date = chrono::Local::now().format("%Y-%m-%d").to_string();
                         let mut cur_date = state_tick.current_date_str.lock().await;
                         if now_date != *cur_date {
@@ -335,7 +335,7 @@ pub fn run() {
                     TrayManager::update_tooltip(&app_tick, &tooltip);
 
                     // Save active session periodically (every 5 seconds or on transition)
-                    if tick_counter % 50 == 0 || tick_event != crate::core::engine::TickEvent::None {
+                    if tick_counter.is_multiple_of(50) || tick_event != crate::core::engine::TickEvent::None {
                         let _ = state_tick.db.save_active_session(&persisted).await;
                     }
 

@@ -1,12 +1,21 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Play, Pause, Maximize2, GripVertical } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { cn } from "../../lib/utils";
 
 export const MiniPillView: React.FC = () => {
   const { t } = useTranslation();
-  const { snapshot, togglePause, setPillMode, dockInfo, setPillTucked } = useTimerStore();
+  const { snapshot, togglePause, setPillMode, dockInfo, setPillTucked } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+      togglePause: state.togglePause,
+      setPillMode: state.setPillMode,
+      dockInfo: state.dockInfo,
+      setPillTucked: state.setPillTucked,
+    }))
+  );
 
   const isPaused = snapshot?.is_paused || false;
   const isBreak = snapshot?.status === "on_break";

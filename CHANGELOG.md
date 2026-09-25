@@ -16,6 +16,10 @@ O2om v4.2.0 is a major stability, performance, and craftsmanship release. It add
 - **Break Session Pause State Preservation (C1)**: Resolved an issue where pausing during an active break or guided exercise transitioned the engine to a generic paused work state and prematurely aborted the routine upon resume. Introduced explicit `pre_pause_status` tracking in `TimerEngine` to guarantee seamless resume into the correct break cycle.
 - **Asynchronous SQLite Connection Architecture (C2)**: Migrated local storage from blocking `rusqlite::Connection` behind a standard `Mutex` to asynchronous non-blocking queries powered by `tokio-rusqlite`. Decoupled persistence operations from the high-precision 100ms timer loop and IPC commands, eliminating thread starvation and lock contention.
 - **Synchronous Initialization Guard (C3)**: Added an immediate synchronous `isInitialized` flag in `useTimerStore.initStore()` preceding IPC registration. Prevents React 19 Strict Mode concurrent double-mount cycles from creating duplicate event listeners and memory leaks.
+- **Frontend Performance**: Fixed Zustand store over-fetching across 11 components by implementing `useShallow`, eliminating idle CPU churn.
+- **Hardware Audio Resiliency**: Fixed an audio stream panic in `rodio` caused by default audio device disconnections (e.g., unplugging headphones).
+- **Streak Logic Rollover**: Fixed a logic bug in SQLite `internal_check_midnight_rollover` where missed goals were incorrectly preserving streaks upon PC reboot.
+- **SQLite Data Migration**: Fixed legacy data migration to correctly copy Write-Ahead Log (`-wal`) and Shared-Memory (`-shm`) files, preventing data loss on updates.
 
 ### High-Severity Fixes
 - **Midnight Date Rollover Data Loss Prevention (H1)**: Eliminated a race condition in `record_stand_if_needed` where querying the current date separately from `check_and_reset_daily_stats` could cause stands completed immediately after midnight to be lost or misattributed. The verified date string is now retrieved once and passed atomically through streak and stand calculations.

@@ -1,11 +1,17 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { cn } from "../../lib/utils";
 
 export const ModeSelector: React.FC = () => {
   const { t } = useTranslation();
-  const { snapshot, settings } = useTimerStore();
+  const { snapshot, settings } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+      settings: state.settings,
+    }))
+  );
 
   const currentCycle = snapshot?.current_cycle || 1;
   const totalCycles = snapshot?.total_cycles || 4;

@@ -2,19 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use crate::db::repository::PersistedSession;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum SessionMode {
+    #[default]
     Pomodoro,
     Standup,
     Eyeguard,
     Custom,
-}
-
-impl Default for SessionMode {
-    fn default() -> Self {
-        SessionMode::Pomodoro
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -174,7 +169,7 @@ impl TimerEngine {
     }
 
     pub fn is_long_break_next(&self) -> bool {
-        ((self.completed_cycles + 1) % self.total_cycles()) == 0
+        (self.completed_cycles + 1).is_multiple_of(self.total_cycles())
     }
 
     pub fn progress_percent(&self) -> u32 {
@@ -188,7 +183,7 @@ impl TimerEngine {
     }
 
     pub fn format_remaining(&self) -> String {
-        let total_sec = (self.remaining_ms + 999) / 1000;
+        let total_sec = self.remaining_ms.div_ceil(1000);
         let mins = total_sec / 60;
         let secs = total_sec % 60;
         format!("{:02}:{:02}", mins, secs)
@@ -372,7 +367,7 @@ impl TimerEngine {
         self.is_guided_exercise = guided_exercise;
         self.completed_cycles += 1;
 
-        let break_dur = if self.completed_cycles % self.total_cycles() == 0 {
+        let break_dur = if self.completed_cycles.is_multiple_of(self.total_cycles()) {
             self.long_break_ms()
         } else {
             self.short_break_ms()
@@ -426,10 +421,7 @@ impl TimerEngine {
 
         // 1. Sleep/wake gap detection (> 5000ms delta)
         if delta_ms > 5000 {
-            if self.status == TimerStatus::Work && delta_ms >= self.idle_threshold_ms() {
-                self.reset_to_work();
-                return TickEvent::None;
-            } else if self.status == TimerStatus::WaitingBreak && delta_ms >= self.idle_threshold_ms() {
+            if (self.status == TimerStatus::Work || self.status == TimerStatus::WaitingBreak) && delta_ms >= self.idle_threshold_ms() {
                 self.reset_to_work();
                 return TickEvent::None;
             } else if self.status == TimerStatus::OnBreak {
@@ -466,11 +458,7 @@ impl TimerEngine {
 
         // 4. Waiting Break State (quietly pauses at 00:00 without escalation chimes or auto-reset)
         if self.status == TimerStatus::WaitingBreak {
-            if physical_idle_ms >= self.idle_threshold_ms() {
-                self.is_idle = true;
-            } else {
-                self.is_idle = false;
-            }
+            self.is_idle = physical_idle_ms >= self.idle_threshold_ms();
             return TickEvent::None;
         }
 

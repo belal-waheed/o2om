@@ -16,13 +16,21 @@ fn get_audio_sender() -> Option<&'static SyncSender<ChimeRequest>> {
         let _ = std::thread::Builder::new()
             .name("o2om-audio-worker".to_string())
             .spawn(move || {
-                let Ok((_stream, stream_handle)) = OutputStream::try_default() else {
-                    eprintln!("[O2om Audio] Failed to initialize default audio output stream");
-                    return;
-                };
+                let mut stream_info = OutputStream::try_default().ok();
 
                 while let Ok(req) = rx.recv() {
-                    let Ok(sink) = Sink::try_new(&stream_handle) else {
+                    if stream_info.is_none() {
+                        stream_info = OutputStream::try_default().ok();
+                    }
+                    
+                    let Some((ref _stream, ref stream_handle)) = stream_info else {
+                        eprintln!("[O2om Audio] Could not get audio device for chime");
+                        continue;
+                    };
+
+                    let Ok(sink) = Sink::try_new(stream_handle) else {
+                        // If the stream became invalid, clear it so we try again next chime
+                        stream_info = None;
                         continue;
                     };
 

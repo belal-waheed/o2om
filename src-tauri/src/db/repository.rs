@@ -63,6 +63,16 @@ impl DbRepository {
             let old_db = parent.join("O2om").join("o2om.db");
             if old_db.exists() && !db_path.exists() {
                 let _ = fs::copy(&old_db, &db_path);
+                
+                let old_wal = parent.join("O2om").join("o2om.db-wal");
+                if old_wal.exists() {
+                    let _ = fs::copy(&old_wal, app_data_dir.join("o2om.db-wal"));
+                }
+                
+                let old_shm = parent.join("O2om").join("o2om.db-shm");
+                if old_shm.exists() {
+                    let _ = fs::copy(&old_shm, app_data_dir.join("o2om.db-shm"));
+                }
             }
         }
 
@@ -294,8 +304,15 @@ impl DbRepository {
         if let Ok((_cur, _best, last)) = streak_row {
             if !last.is_empty() && last != today {
                 let yesterday = (Local::now() - chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
-                if last != yesterday {
-                    // Missed days -> reset streak
+                
+                let yesterday_goal_met: u32 = conn.query_row(
+                    "SELECT goal_met FROM daily_health_records WHERE date = ?1",
+                    params![yesterday],
+                    |row| row.get(0),
+                ).unwrap_or(0);
+
+                if yesterday_goal_met == 0 {
+                    // Missed days or missed yesterday's goal -> reset streak
                     conn.execute("UPDATE streaks_metadata SET current_streak_days = 0 WHERE id = 1", [])?;
                 }
             }
@@ -319,9 +336,10 @@ impl DbRepository {
 
     pub async fn record_completed_break(&self, goal: u32) -> Result<BreakRecordResult, tokio_rusqlite::Error> {
         self.conn.call(move |conn| {
-            let today = Self::internal_check_midnight_rollover(conn, goal)?;
+            let tx = conn.transaction()?;
+            let today = Self::internal_check_midnight_rollover(&tx, goal)?;
 
-            conn.execute(
+            tx.execute(
                 "UPDATE daily_health_records 
                  SET stands_count = stands_count + 1,
                      stand_goal = ?1,
@@ -330,7 +348,7 @@ impl DbRepository {
                 params![goal, today],
             )?;
 
-            let today_stands: u32 = conn.query_row(
+            let today_stands: u32 = tx.query_row(
                 "SELECT stands_count FROM daily_health_records WHERE date = ?1",
                 params![today],
                 |row| row.get(0),
@@ -338,7 +356,7 @@ impl DbRepository {
 
             let goal_just_met = today_stands == goal;
 
-            let streak_row = conn.query_row(
+            let streak_row = tx.query_row(
                 "SELECT current_streak_days, best_streak_days FROM streaks_metadata WHERE id = 1",
                 [],
                 |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)),
@@ -357,12 +375,14 @@ impl DbRepository {
                 }
             }
 
-            conn.execute(
+            tx.execute(
                 "UPDATE streaks_metadata 
                  SET current_streak_days = ?1, best_streak_days = ?2, last_active_date = ?3 
                  WHERE id = 1",
                 params![current_streak, best_streak, today],
             )?;
+
+            tx.commit()?;
 
             Ok(BreakRecordResult {
                 goal_just_met,
@@ -377,13 +397,15 @@ impl DbRepository {
             return Ok(());
         }
         self.conn.call(move |conn| {
-            let today = Self::internal_check_midnight_rollover(conn, goal)?;
-            conn.execute(
+            let tx = conn.transaction()?;
+            let today = Self::internal_check_midnight_rollover(&tx, goal)?;
+            tx.execute(
                 "UPDATE daily_health_records 
                  SET focus_minutes = focus_minutes + ?1 
                  WHERE date = ?2",
                 params![minutes, today],
             )?;
+            tx.commit()?;
             Ok(())
         }).await
     }
@@ -697,6 +719,14 @@ mod tests {
         // Test migration copy
         if legacy_db.exists() && !new_db.exists() {
             fs::copy(&legacy_db, &new_db).unwrap();
+            let legacy_wal = legacy_dir.join("o2om.db-wal");
+            if legacy_wal.exists() {
+                fs::copy(&legacy_wal, new_dir.join("o2om.db-wal")).unwrap();
+            }
+            let legacy_shm = legacy_dir.join("o2om.db-shm");
+            if legacy_shm.exists() {
+                fs::copy(&legacy_shm, new_dir.join("o2om.db-shm")).unwrap();
+            }
         }
 
         let new_repo = DbRepository::for_test(new_db.clone()).await;

@@ -8,13 +8,20 @@ import {
   RotateCcw,
   BarChart3,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { tauriApi, type DailyHealthRecord } from "../../lib/ipc";
 
 export const StatsView: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language === "ar";
-  const { healthSummary, resetStats, refreshStats } = useTimerStore();
+  const { healthSummary, resetStats, refreshStats } = useTimerStore(
+    useShallow((state) => ({
+      healthSummary: state.healthSummary,
+      resetStats: state.resetStats,
+      refreshStats: state.refreshStats,
+    }))
+  );
   const [weeklyHistory, setWeeklyHistory] = useState<DailyHealthRecord[]>([]);
 
   useEffect(() => {

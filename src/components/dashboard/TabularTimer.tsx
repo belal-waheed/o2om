@@ -1,10 +1,15 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 
 export const TabularTimer: React.FC = () => {
   const { t } = useTranslation();
-  const { snapshot } = useTimerStore();
+  const { snapshot } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+    }))
+  );
 
   const formattedTime = snapshot?.formatted_remaining || "25:00";
   const status = snapshot?.status || "work";

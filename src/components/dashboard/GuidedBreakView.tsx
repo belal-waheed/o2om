@@ -8,13 +8,20 @@ import {
   CheckCircle2,
   X,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { tauriApi, type ExerciseStep } from "../../lib/ipc";
 
 export const GuidedBreakView: React.FC = () => {
   const { i18n, t } = useTranslation();
   const isAr = i18n.language === "ar";
-  const { snapshot, skipBreak, togglePause } = useTimerStore();
+  const { snapshot, skipBreak, togglePause } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+      skipBreak: state.skipBreak,
+      togglePause: state.togglePause,
+    }))
+  );
 
   const [routine, setRoutine] = useState<ExerciseStep[]>([]);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);

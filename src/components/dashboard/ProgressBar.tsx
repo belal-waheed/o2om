@@ -1,8 +1,13 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 
 export const ProgressBar: React.FC = () => {
-  const { snapshot } = useTimerStore();
+  const { snapshot } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+    }))
+  );
   const progress = snapshot?.progress_percent ?? 0;
   const status = snapshot?.status || "work";
 

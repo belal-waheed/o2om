@@ -14,12 +14,20 @@ import {
   AlertCircle,
   RotateCcw,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import type { EngineSettings } from "../../lib/ipc";
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
-  const { settings, saveSettings, setActiveTab, resetStats } = useTimerStore();
+  const { settings, saveSettings, setActiveTab, resetStats } = useTimerStore(
+    useShallow((state) => ({
+      settings: state.settings,
+      saveSettings: state.saveSettings,
+      setActiveTab: state.setActiveTab,
+      resetStats: state.resetStats,
+    }))
+  );
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);

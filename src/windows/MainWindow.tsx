@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
 import { Timer, BarChart3, Settings } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../stores/useTimerStore";
 import { cn } from "../lib/utils";
 import { ModeSelector } from "../components/dashboard/ModeSelector";
@@ -14,7 +15,12 @@ import { SettingsView } from "../components/settings/SettingsView";
 
 export const MainWindow: React.FC = () => {
   const { t } = useTranslation();
-  const { activeTab, setActiveTab } = useTimerStore();
+  const { activeTab, setActiveTab } = useTimerStore(
+    useShallow((state) => ({
+      activeTab: state.activeTab,
+      setActiveTab: state.setActiveTab,
+    }))
+  );
 
   // Main Dashboard View
   return (

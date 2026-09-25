@@ -1,11 +1,17 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 
 export const StreakBadge: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language === "ar";
-  const { healthSummary, setActiveTab } = useTimerStore();
+  const { healthSummary, setActiveTab } = useTimerStore(
+    useShallow((state) => ({
+      healthSummary: state.healthSummary,
+      setActiveTab: state.setActiveTab,
+    }))
+  );
 
   const todayStands = healthSummary?.today_stands ?? 0;
   const goal = healthSummary?.daily_stand_goal ?? 8;

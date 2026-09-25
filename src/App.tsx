@@ -1,11 +1,16 @@
 import React, { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { MainWindow } from "./windows/MainWindow";
 import { MiniPillView } from "./components/dashboard/MiniPillView";
 import { GuidedBreakView } from "./components/dashboard/GuidedBreakView";
 import { useTimerStore } from "./stores/useTimerStore";
 
 export const App: React.FC = () => {
-  const { initStore } = useTimerStore();
+  const { initStore } = useTimerStore(
+    useShallow((state) => ({
+      initStore: state.initStore,
+    }))
+  );
 
   const params = new URLSearchParams(window.location.search);
   const win = params.get("win");

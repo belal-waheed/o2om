@@ -10,6 +10,7 @@ import {
   Minimize2,
   CheckCircle2,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useTimerStore } from "../../stores/useTimerStore";
 import { cn } from "../../lib/utils";
 
@@ -24,7 +25,18 @@ export const ActionCenter: React.FC = () => {
     resetTimer,
     snoozeTimer,
     setPillMode,
-  } = useTimerStore();
+  } = useTimerStore(
+    useShallow((state) => ({
+      snapshot: state.snapshot,
+      startWork: state.startWork,
+      startBreak: state.startBreak,
+      skipBreak: state.skipBreak,
+      togglePause: state.togglePause,
+      resetTimer: state.resetTimer,
+      snoozeTimer: state.snoozeTimer,
+      setPillMode: state.setPillMode,
+    }))
+  );
 
   const status = snapshot?.status || "work";
   const isPaused = snapshot?.is_paused || false;
